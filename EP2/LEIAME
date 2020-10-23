@@ -1,0 +1,8 @@
+Emanuel Lima de Sousa - 9009493
+João Seckler - 4603521
+
+Compilação:
+$ make
+
+Execução:
+$ ./ep2 <d> <n>
