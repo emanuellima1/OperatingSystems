@@ -6,3 +6,58 @@ $ make
 
 Execução:
 $ ./ep2 <d> <n>
+
+
+TODO
+
+destruir threads - ok
+velocidade - ok
+ultrapassagem - ok
+
+sorteio de velocidade
+colocação
+eliminação do último colocado
+quebra
+output
+debug
+
+
+PSEUDOCÓDIGO
+main()
+    inicializa todas as variáveis (aloca, dá init nos mutex e barriers)
+    inicializa o vetor corredor_v (variável local) com n ciclistas
+    cria uma thread para cada ciclista
+
+    round = 0
+    enquanto o número de corredores > 1:
+        espera barreira[round]
+        inicializa a barreira[!round] com o número atualizado de corredores
+        espera barreira[round]
+        desaloca threads que foram eliminadas
+        round = !round
+
+thread(struct corredor me)
+    se vou tentar andar:
+        se a posição à frente estiver vazia:
+            anda para a posição da frente
+            se remove da posição antiga
+            atualiza sua própria posição (me->x)
+
+        senão: vou tentar ultrapassar
+            para i = me->y até i < 10:
+                se pista[me->x][i] estiver livre:
+                    se pista[me->x + 1][i] estiver livre:
+                        anda para pista[me->x + 1][i]
+                        se remove de pista[me->x][me->y]
+                        atualiza sua própria posição
+                        break
+
+    se houver espaço à minha esquerda, vou para a esquerda
+
+    se eu acabei de completar uma rodada:
+        se eu quebrar:
+            diminui corredor_count
+            se remove da pista
+            me->dead = 1
+            return 0
+
