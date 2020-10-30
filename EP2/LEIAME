@@ -61,3 +61,23 @@ thread(struct corredor me)
             me->dead = 1
             return 0
 
+OBSERVAÇÕES DE IMPLEMENTAÇÃO
+
+- A corrida tem no máximo 2n voltas (caso em que ninguém "quebra"). Por
+  isso o vetor "placing_count", que armazena na posição i quantos
+  corredores já passaram pela i-ésima volta, tem tamanho 2n.
+
+- Assim como na corrida real, os corredores começam antes da linha de
+  chegada. O nosso algoritmo conta um "turno fantasma", onde uma variável
+  turn é igual a -1, que corresponde a esse momento entre a partida e a
+  primeira vez que o corredor passa pela linha de chegada.
+
+- A posição x de cada corredor (deslocamento frente/trás) é guardada como o
+  dobro do que de fato é. Para ler/escrever, dividimos inteiramente por 2.
+  Quando houver alguém correndo a 90, essa constante passa a ser 6. Nesse
+  caso vamos multiplicar todos os x por 3.
+
+- Quando um ciclista correr rodadas suficientes para determinar sua
+  posição em todas as rodadas da corrida, a thread correspondente é
+  desalocada e tudo se passa como se esse corredor foi desalocado.
+
