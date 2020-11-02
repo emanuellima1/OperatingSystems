@@ -2,6 +2,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
+#include <math.h>
+
+#define RUNNING 1
+#define DESTROYED 2
 
 enum velocity {VEL30 = 1, VEL60 = 2, VEL90 = 3};
 
@@ -11,18 +16,20 @@ struct corredor {
     int x;
     int y;
     pthread_t thread;
-    int dead; /* 1 -> corredor is dead. 2 -> corredor is destroyed */
-    int * placing;
+    int state; /* mask. See #defines above */
+    int * placing; /* placing in each turn */
+    int final_turn; /* negative values for who breaks */
+    float final_time;
 };
+
+int d; // length of the track
+int n; // initial number of competitors
 
 struct corredor *** pista; // matrix of pointers to struct corredor
 pthread_mutex_t **pista_mutex;
 
 int corredor_count; // number of remaining competitors
-pthread_mutex_t corredor_count_mutex; //
-
-int d; // length of the track
-int n; // initial number of competitors
+pthread_mutex_t corredor_count_mutex;//
 
 pthread_barrier_t *barrier; // vector of two barriers, one for each round
 
@@ -30,20 +37,26 @@ int * placing_count;
 int * placing_count_max;
 pthread_mutex_t * placing_count_mutex;
 
-/* int global_turn; */
+int global_turn; // No need for mutex since only one is last each turn
+
+float elapsed_time; // in centiseconds
+/* No need for mutex since:
+   - it is read only for all thread which are not main
+   - barriers guarantee main only updates this when no thread is trying
+     to read it
+*/
 
 void * thread(void * arg) {
     struct corredor *me = (struct corredor*)arg;
     int oldx, newx, round = 0, turn = -1;
-    float r;
 
     while(1) {
         oldx = me->x/2;
         newx = (me->x + me->vel)/2 % d;
         // Fact: newx = oldx + 1 or newx = oldx
-        // (to enforce this, the VEL90 = 3 case must be treated specially)
+        // (to enforce this, the vel90 = 3 case must be treated specially)
 
-        if (oldx != newx) { /* Vou tentar andar */
+        if (oldx != newx) { /* trying to walk */
             pthread_mutex_lock(&pista_mutex[newx][me->y]);
 
             if (pista[newx][me->y] == NULL) {
@@ -56,10 +69,9 @@ void * thread(void * arg) {
 
                 me->x = (me->x + me->vel) % (2*d);
             }
-
             else {
                 pthread_mutex_unlock(&pista_mutex[newx][me->y]);
-                for (int i = me->y; i < 10; i++) { // tenta ultrapassar
+                for (int i = me->y; i < 10; i++) { // attempt to overtake
 
                     pthread_mutex_lock(&pista_mutex[oldx][i]);
                     if (pista[oldx][i] == NULL) {
@@ -83,13 +95,12 @@ void * thread(void * arg) {
                         pthread_mutex_unlock(&pista_mutex[oldx][i]);
                 }
             }
-            pthread_mutex_unlock(&pista_mutex[newx][me->y]);
         } else
             me->x = (me->x + me->vel) % (2*d);
 
 
         pthread_barrier_wait(&barrier[round]);
-        /* Tenta andar à esquerda */
+        /* try to go to the left */
         for (int i = me->y - 1; i >= 0; i--) {
             pthread_mutex_lock(&pista_mutex[me->x/2][i]);
             if (pista[me->x/2][i] == NULL) {
@@ -111,13 +122,14 @@ void * thread(void * arg) {
 
                 if (me->placing[turn] == placing_count_max[turn]) {
                     pthread_mutex_unlock(&placing_count_mutex[turn]);
-                    if (turn > 0 && turn % 2) {
-                        if (me->placing[turn] == 1)
-                            printf("Corredor %d ganhou a corrida\n", me->id);
-                        else
-                            printf("Corredor %d foi eliminado\n", me->id);
 
-                        me->dead = 1;
+                    if (turn == global_turn)
+                        global_turn++;
+
+                    if (turn % 2) {
+                        me->state &= ~RUNNING;
+                        me->final_time = elapsed_time;
+                        me->final_turn = turn;
 
                         pthread_mutex_lock(&corredor_count_mutex);
                         corredor_count--;
@@ -133,11 +145,15 @@ void * thread(void * arg) {
                         return(0);
                     }
                 }
-                pthread_mutex_unlock(&placing_count_mutex[turn]);
+                else
+                    pthread_mutex_unlock(&placing_count_mutex[turn]);
 
-                if (turn % 6 == 0 && (r = (float)rand()/(float)RAND_MAX) < 0.05) {
-                    fprintf(stderr, "Corredor %d quebrou\n", me->id);
-                    me->dead = 1;
+                if (turn > 0 && turn % 6 == 0 &&
+                        (float)rand()/(float)RAND_MAX < 0.05) {
+                    printf("Corredor %d quebrou\n", me->id);
+
+                    me->state &= ~RUNNING;
+                    me->final_turn = -turn;
                     pthread_mutex_lock(&corredor_count_mutex);
                     corredor_count--;
                     pthread_mutex_unlock(&corredor_count_mutex);
@@ -165,23 +181,60 @@ void * thread(void * arg) {
         pthread_barrier_wait(&barrier[round]);
         round = !round;
 
-        if (corredor_count == 1)
+        if (corredor_count == 0)
             return(0);
     }
 }
 
-void print() {
-    int cols = 80; // maybe get current terminal width here
+void print_track() {
+    int c = (int) log((double) n);
     for (int j = 0; j < 10; j++){
-        for (int i = 0; i < cols - 3 && i < d; i++) {
+        for (int i = 0; i < d; i++) {
             if (pista[i][j])
-                printf("%d", pista[i][j]->id);
-            else
+                printf("%*d", c, pista[i][j]->id);
+            else {
                 printf("_");
+                for (int j = 0; j < c - 1; j++)
+                    printf(" ");
+            }
         }
         printf("\n");
     }
-    /* getchar(); */
+    printf("\n");
+}
+
+void print_positions(struct corredor * v, int turn) {
+    printf("Colocações na volta %d:\n", turn);
+    for (int i = 0; i < n; i++)
+        if (v[i].placing[turn])
+            printf(" - Corredor %d: colocação %d\n",
+                   v[i].id, v[i].placing[turn]);
+    printf("\n");
+}
+
+int compar(const void* x, const void* y) {
+    struct corredor *a = (struct corredor *)x;
+    struct corredor *b = (struct corredor *)y;
+    if (a->final_turn < b->final_turn)
+        return 1;
+    if (a->final_turn > b->final_turn)
+        return -1;
+    return 0;
+}
+
+void print_final(struct corredor * v) {
+    printf("Colocações finais:\n");
+    qsort(v, (size_t) n, sizeof(struct corredor), compar);
+
+    for (int i = 0; i < n; i++)
+        if (v[i].final_time > 0)
+            printf(" - Colocação %d: corredor %d, última volta "
+                   "completada aos %.2f segundos\n",
+                    i + 1, v[i].id, v[i].final_time/100);
+        else
+            printf(" - Corredor %d: quebrou na rodada %d\n",
+                   v[i].id, -v[i].final_turn);
+    printf("\n");
 }
 
 int main(int argc, char* argv[])
@@ -194,6 +247,10 @@ int main(int argc, char* argv[])
 
     d = atoi(argv[1]);
     n = atoi(argv[2]);
+
+    int debug = 0;
+    if (argc > 3 && !strcmp("debug", argv[3]))
+        debug = 1;
     /******************************************************************/
 
     /******* Initialization *******************************************/
@@ -231,6 +288,10 @@ int main(int argc, char* argv[])
         m--;
     }
 
+    global_turn = 0;
+
+    elapsed_time = 0.06;
+
     struct corredor * corredor_v;
     corredor_v = malloc(n * sizeof(struct corredor));
 
@@ -244,7 +305,7 @@ int main(int argc, char* argv[])
         corredor_v[i].y = imod5;
         corredor_v[i].vel = VEL30;
         corredor_v[i].id = i;
-        corredor_v[i].dead = 0;
+        corredor_v[i].state = RUNNING;
         corredor_v[i].placing = malloc(2 * n * sizeof(int));
         for (int j = 0; j < 2 * n; j++)
             corredor_v[i].placing[j] = 0;
@@ -253,13 +314,15 @@ int main(int argc, char* argv[])
     /******************************************************************/
     corredor_v[5].vel = VEL60;
 
-    int round = 0, c, change_barrier = 0;
-    while(corredor_count > 1) {
+    int round = 0, c, change_barrier = 0, turn = global_turn;
+    while(corredor_count > 0) {
         c = corredor_count;
         pthread_barrier_wait(&barrier[round]);
         pthread_barrier_wait(&barrier[round]);
 
         if (c != corredor_count || change_barrier) {
+            /* Only reinitialize barrier if the number of competitors
+             * has changed */
             pthread_barrier_destroy(&barrier[!round]);
             pthread_barrier_init(&barrier[!round], NULL, corredor_count + 1);
             if (c != corredor_count)
@@ -268,21 +331,28 @@ int main(int argc, char* argv[])
                 change_barrier = 0;
         }
 
+        if (turn != global_turn) {
+            print_positions(corredor_v, turn);
+            turn++;
+        }
+
+        if (debug)
+            print_track();
+
+        elapsed_time += 6;
+
         pthread_barrier_wait(&barrier[round]);
 
         for (int i = 0; i < n; i++) {
-            if (corredor_v[i].dead == 1) {
+            if ((corredor_v[i].state & (DESTROYED | RUNNING)) == 0) {
                 pthread_join(corredor_v[i].thread, NULL);
-                corredor_v[i].dead = 2;
+                corredor_v[i].state |= DESTROYED;
             }
         }
         round = !round;
     }
-    for (int i = 0; i < n; i++) {
-        if (corredor_v[i].dead == 0) {
-            pthread_join(corredor_v[i].thread, NULL);
-        }
-    }
+
+    print_final(corredor_v);
 
     /****** Destruction ***********************************************/
 
