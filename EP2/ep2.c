@@ -49,6 +49,7 @@ float elapsed_time; // in centiseconds
 void * thread(void * arg) {
     struct corredor *me = (struct corredor*)arg;
     int oldx, newx, round = 0, turn = -1;
+    float r;
 
     while(1) {
         oldx = me->x/2;
@@ -174,7 +175,16 @@ void * thread(void * arg) {
                     return(0);
                 }
             }
+
+            /* Change velocity? */
+            r = (float)rand()/(float)RAND_MAX;
+            if (me->vel == VEL30 && r < 0.8)
+                me->vel = VEL60;
+            else if (me->vel == VEL60 && r < 0.4)
+                me->vel = VEL30;
+
             turn++;
+
         }
 
         pthread_barrier_wait(&barrier[round]);
@@ -187,7 +197,7 @@ void * thread(void * arg) {
 }
 
 void print_track() {
-    int c = (int) log((double) n);
+    int c = (int) log10((double) n);
     for (int j = 0; j < 10; j++){
         for (int i = 0; i < d; i++) {
             if (pista[i][j])
@@ -312,7 +322,6 @@ int main(int argc, char* argv[])
         pthread_create(&corredor_v[i].thread, NULL, thread, (void *)(corredor_v + i));
     }
     /******************************************************************/
-    corredor_v[5].vel = VEL60;
 
     int round = 0, c, change_barrier = 0, turn = global_turn;
     while(corredor_count > 0) {
