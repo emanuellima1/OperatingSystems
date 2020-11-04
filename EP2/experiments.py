@@ -16,7 +16,7 @@ for i in range(3):
     e1 = subprocess.call(["./test.sh", str(d[i]), str(n[1])])
 
     with open("time.out", 'r') as f:
-        time = [float(r) - 1 for r in f.readlines()]
+        time = [float(r) for r in f.readlines()]
     with open("mem.out", 'r') as f:
         memory = [float(r) for r in f.readlines()]
 
@@ -31,7 +31,7 @@ for i in range(3):
     e1 = subprocess.run(["./test.sh", str(d[1]), str(n[i])])
 
     with open("time.out", 'r') as f:
-        time = [float(r) - 1 for r in f.readlines()]
+        time = [float(r) for r in f.readlines()]
     with open("mem.out", 'r') as f:
         memory = [float(r) for r in f.readlines()]
 
