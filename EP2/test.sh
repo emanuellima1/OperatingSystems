@@ -3,8 +3,8 @@
 
 rm -f time.out mem.out
 for i in {1..30}; do
-    /usr/bin/time -p ./ep2 $1 $2 2>&1 > /dev/null | tail -3 | head -1 | awk '{print $2}'a >> time.out &
-    pmap $! | tail -1 | grep -P -o '\d*(?=K)' >> mem.out
-    wait $!
+    a=$(/usr/bin/time -v ./ep2 $1 $2 2>&1 > /dev/null)
+    echo "$a" | grep -o -P "(?<=User time \(seconds\)\: )\d*\.?\d*" >> time.out
+    echo "$a" | grep -o -P "(?<=Maximum resident set size \(kbytes\)\: )\d*" >> mem.out
 done
 

@@ -7,7 +7,7 @@ import statistics as st
 import os
 
 
-d = [10, 100, 100]
+d = [10, 100, 1000]
 n = [5, 25, 250]
 
 results = {}
