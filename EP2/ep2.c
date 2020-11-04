@@ -4,7 +4,6 @@
 #include <time.h>
 #include <string.h>
 #include <math.h>
-#include <unistd.h>
 
 #define RUNNING 1
 #define DESTROYED 2
@@ -414,8 +413,6 @@ int main(int argc, char* argv[]) {
     }
 
     print_final(corredor_v);
-
-    sleep(1);
 
     /****** Destruction ***********************************************/
 
