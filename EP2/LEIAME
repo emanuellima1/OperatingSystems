@@ -41,8 +41,8 @@ OBSERVAÇÕES DE IMPLEMENTAÇÃO
 
 - A posição x de cada corredor (deslocamento frente/trás) é guardada
   como o dobro do que de fato é. Para ler/escrever, dividimos
-  inteiramente por 2. Quando houver alguém correndo a 90, essa
-  constante passa a ser 6.
+  inteiramente por 2. Quando houver alguém correndo a 90, essa constante
+  passa a ser 6.
 
 - Quando um ciclista correr rodadas suficientes para determinar sua
   posição em todas as rodadas da corrida, a thread correspondente é

@@ -245,10 +245,10 @@ void print_track() {
     for (int j = 0; j < 10; j++){
         for (int i = 0; i < d; i++) {
             if (pista[i][j])
-                printf("%*d", c, pista[i][j]->id);
+                printf("%*d", c + 1, pista[i][j]->id);
             else {
                 printf("_");
-                for (int j = 0; j < c - 1; j++)
+                for (int j = 0; j < c; j++)
                     printf(" ");
             }
         }
