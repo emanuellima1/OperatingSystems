@@ -5,14 +5,14 @@ INCLDIR	= include/
 CFLAGS=-Wall -Wextra -std=gnu++17 -g -I$(INCLDIR)
 
 SRC=$(wildcard src/*.cpp)
-OBJ=$(SRC1:.cpp=.o)
+OBJ=$(SRC:.cpp=.o)
+HEAD=$(wildcard include/*.hpp)
 
 EXEC=ep3
 
-all: $(EXEC)
-
-$(EXEC): $(OBJ)
+$(EXEC): $(OBJ) $(HEAD)
 	$(CC) $(CFLAGS) -o $@ $(SRC)
+
 
 clean:
 	rm -rf $(OBJ) $(EXEC)

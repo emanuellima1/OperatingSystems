@@ -5,9 +5,9 @@
 class File {
 public:
     // Creates a File. Called on touch (if the file doesn't exist).
-    File(std::string name, uint creation_time, uint size = 0)
-        : name { name }
-        , creation_time { creation_time } {};
+    File(/*std::string name, uint creation_time, uint size = 0*/)
+        /* : name { name } */
+        /*, creation_time { creation_time } */ {};
 
     // Destroys a File. Called on rm.
     ~File();
