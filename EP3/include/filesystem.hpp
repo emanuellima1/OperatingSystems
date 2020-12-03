@@ -1,9 +1,13 @@
 #pragma once
 
 #include <string>
+#include "directory.hpp"
+#include "regular_file.hpp"
+
+
 #define MAX_PAGES 25000 // Maximum number of 4.0K pages (total 100MB)
 #define PAGE_SIZE 4000
-#define HEAD_PAGES (MAX_PAGES/8 + MAX_PAGES)/PAGE_SIZE + 1 // Number of pages used for bitmap and fap
+#define ROOT_PAGE (MAX_PAGES/8 + MAX_PAGES)/PAGE_SIZE + 1
 
 class Filesystem {
 public:
@@ -21,10 +25,17 @@ public:
     bool bitmap_set(int, int, bool);
     int fat_get(int); // returns -1 if set/get was not successful
     int fat_set(int, int);
-    int mkdir(std::string);
     int free_page(); // get first free page
+    void write_dir(Directory*); // write directory to fs
+    void write_file(); // write regular file to fs
+    void mkdir(std::string); // write regular file to fs
+    void ls(std::string path);
 
 private:
+    File* get_file(std::string path);
+    std::string filename(std::string path);
+    std::string dirname(std::string path);
+    Directory *root;
     // bitmap and fat tables
     uint bitmap[MAX_PAGES/8];
     int fat[MAX_PAGES];

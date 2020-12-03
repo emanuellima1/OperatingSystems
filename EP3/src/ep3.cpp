@@ -4,7 +4,7 @@
 #include <sstream>
 
 #include "../include/directory.hpp"
-#include "../include/file.hpp"
+#include "../include/regular_file.hpp"
 #include "../include/filesystem.hpp"
 
 int main()
@@ -18,6 +18,8 @@ int main()
 
     std::cout << "[ep3]: ";
     while (std::getline(std::cin, command)) {
+        token_stream.clear();
+        token.clear();
         token_stream.str(command);
         token_stream >> token;
 
@@ -33,6 +35,10 @@ int main()
             token_stream >> token;
             fs->mkdir(token);
         }
+        else if (token == "ls") {
+            token_stream >> token;
+            fs->ls(token);
+        }
 
         else {
             std::cout << "comando não identificado: " << token << std::endl;
@@ -40,6 +46,7 @@ int main()
 
         std::cout << "[ep3]: ";
     }
+    std::cout << std::endl;
 
     return 0;
 }

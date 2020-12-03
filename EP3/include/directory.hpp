@@ -1,14 +1,17 @@
 #pragma once
 
 #include <string>
+#include <fstream>
+#include <map>
 
-class Directory {
+#include "file.hpp"
+
+class Directory: public File {
 public:
     // Creates a Directory. Called on mkdir.
-    Directory(std::string name, uint creation_time)
-        : name { name }
-        , creation_time { creation_time } {};
-
+    Directory(int page, std::string name, int next_block, 
+              uint creation_time, uint modification_time, uint access_time,
+              Directory *parent);
     // Destroys a Directory. Called on rmdir.
     ~Directory();
 
@@ -18,7 +21,8 @@ public:
     // Search for a file with name filename inside of *this
     void find(std::string filename);
 
-private:
-    std::string name;
-    uint creation_time, modification_time = 0, access_time = 0;
+    void add_file(File *file);
+    std::map<std::string, File*> files;
+    Directory *parent;
+    uint creation_time, modification_time, access_time;
 };
