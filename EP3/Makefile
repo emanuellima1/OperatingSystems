@@ -2,7 +2,7 @@ CXX=g++
 
 INCLDIR	= include/
 
-CXXFLAGS=-Wall -Wextra -std=gnu++17 -g -I$(INCLDIR)
+CXXFLAGS=-Wall -Wextra -pedantic -std=gnu++17 -g -I$(INCLDIR)
 
 SRC=$(wildcard src/*.cpp)
 OBJ=$(SRC:.cpp=.o)

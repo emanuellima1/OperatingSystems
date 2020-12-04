@@ -212,6 +212,22 @@ void Filesystem::touch(std::string path) {
     bitmap_set(p, 0);
 }
 
+void Filesystem::rm(std::string path) {
+    File *f;
+    Directory *parent;
+    if ((f = get_file(path))) {
+    /* if ((f = dynamic_cast<RegularFile*>(get_file(path)))) { */
+
+        parent = (Directory*) get_file(dirname(path));
+        std::cout << "parent: " << parent->name << "\n";
+        parent->files.erase(f->name);
+        bitmap_set(f->page, 1);
+        delete f;
+    }
+    std::cout << f << "\n";
+
+}
+
 
 void Filesystem::write_file(File *f) {
     //TODO: Se o tamanho do parente ultrapassar 4K, usar um novo bloco

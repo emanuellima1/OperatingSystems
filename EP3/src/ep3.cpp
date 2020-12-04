@@ -43,7 +43,7 @@ int main()
         }
         else if (token == "rm") {
             token_stream >> token;
-            fs->touch(token);
+            fs->rm(token);
         }
 
         else {
