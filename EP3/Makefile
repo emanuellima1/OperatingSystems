@@ -11,7 +11,7 @@ HEAD=$(wildcard include/*.hpp)
 EXEC=ep3
 
 $(EXEC): $(OBJ) $(HEAD)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $(SRC)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ $(OBJ)
 
 clean:
 	rm -rf $(OBJ) $(EXEC)
