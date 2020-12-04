@@ -41,6 +41,6 @@ private:
     std::string dirname(std::string path);
     void write_dir(Directory*); // write directory to fs
     void write_file(RegularFile*); // write regular file to fs
-    File* read_file(int page, Directory *parent); 
+    File* read_file(int page); 
 };
 

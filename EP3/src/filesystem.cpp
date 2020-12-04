@@ -32,7 +32,7 @@ Filesystem::Filesystem(std::string filename) {
         fs->open(filename, std::ios::in | std::ios::out | std::ios::binary);
 
         uint now = (uint) time(NULL);
-        root = new Directory(ROOT_PAGE, "/", -1, now, now, now, nullptr);
+        root = new Directory(ROOT_PAGE, "/", -1, now, now, now);
         write_dir(root);
     }
 
@@ -41,7 +41,7 @@ Filesystem::Filesystem(std::string filename) {
             bitmap[i] = (uint) fs->get();
         for (uint i = 0; i < MAX_PAGES; i++)
             fat[i] = (uint) fs->get();
-        root = (Directory *) read_file(ROOT_PAGE, nullptr);
+        root = (Directory *) read_file(ROOT_PAGE);
     }
 }
 
@@ -161,7 +161,6 @@ std::string Filesystem::dirname(std::string name) {
 
 void Filesystem::mkdir(std::string path) {
     //TODO: Se o tamanho do parente ultrapassar 4K, usar um novo bloco
-    //TODO: acertar o fat e o bitmap depois de criar
     Directory *d;
     int p = free_page();
     if (p == -1)
@@ -171,26 +170,43 @@ void Filesystem::mkdir(std::string path) {
     std::string name = filename(path);
     uint now = (uint) time(NULL);
 
-    d = new Directory(p, name, -1, now, now, now, parent);
+    d = new Directory(p, name, -1, now, now, now);
     parent->files[name] = {d, 'd', p};
     write_dir(d);
     write_dir(parent);
+    bitmap_set(p, 0);
 }
 
 void Filesystem::ls(std::string path) {
     File *f = get_file(path);
     Directory *d;
     
-    if ((d = dynamic_cast<Directory*>(f)))
-        d->ls();
+    if (f->type == 'd')
+        (d = (Directory *) f)->ls();
     else
         std::cout << f->name << std::endl;
 }
 
 void Filesystem::write_dir(Directory *d) {
-    /* directory metadata format: 
+    /* data format: 
+     * Separate the following fields with "-" (including one at the
+     * end):
      *
-     * Or, with regex:
+     * * next block
+     * * type (d or f)
+     * * size (if type is f)
+     * * ct, mt, at
+     * * content
+     *
+     * If type is d, the content has the following format:
+     * Separate each file with "|" (including one at the end, before the
+     * last "-"). Each file is composed of:
+     *
+     * * type
+     * * block
+     * * name
+     *
+     * without any separators (since type and block have fixed size)
      * */
 
     fs->seekp(d->page * PAGE_SIZE);
@@ -206,6 +222,7 @@ void Filesystem::write_dir(Directory *d) {
     fs->put('-');
     if (!d->files.empty()) {
         for (auto& [name, t] : d->files) {
+            // t is a tuple<File*,char type, int block>
             fs->put(std::get<1>(t));
             fs->write((char*) &(std::get<2>(t)), sizeof(int));
             fs->write(std::get<0>(t)->name.c_str(), std::get<0>(t)->name.length());
@@ -215,7 +232,7 @@ void Filesystem::write_dir(Directory *d) {
     fs->put('-');
 }
 
-File* Filesystem::read_file(int page, Directory *parent) {
+File* Filesystem::read_file(int page) {
     char c, type;
     int next_block, block;
     uint size;
@@ -234,7 +251,7 @@ File* Filesystem::read_file(int page, Directory *parent) {
         fs->get();
         fs->read((char*) &at, sizeof(uint));
         fs->get();
-        Directory *d = new Directory(page, name, next_block, ct, mt, at, parent);
+        Directory *d = new Directory(page, name, next_block, ct, mt, at);
 
         name.clear();
         type = fs->get();
@@ -263,7 +280,7 @@ File* Filesystem::read_file(int page, Directory *parent) {
         fs->get();
         fs->read((char*) &at, sizeof(uint));
         fs->get();
-        RegularFile *f = new RegularFile(page, name, next_block, ct, mt, at, parent);
+        RegularFile *f = new RegularFile(page, name, next_block, ct, mt, at);
         fs->get();
         name.clear();
         std::getline(*fs, f->content, '-');

@@ -5,10 +5,12 @@
 class File {
 public:
     // Creates a File.
-    File(int, std::string, int, char);
+    File(int page, std::string name, int next_block, char type,
+         uint creation_time, uint modification_time, uint access_time);
     virtual ~File() {};
     int page;
     std::string name;
     int next_block;
     char type;
+    uint creation_time, modification_time, access_time;
 };
