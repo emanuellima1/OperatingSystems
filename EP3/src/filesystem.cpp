@@ -6,7 +6,6 @@
 #include <sstream>
 #include <ctime>
 
-
 Filesystem::Filesystem(std::string filename) {
     fs = new std::fstream(filename, std::ios::in | std::ios::out | std::ios::binary);
     if (!fs->is_open()) {
@@ -33,6 +32,7 @@ Filesystem::Filesystem(std::string filename) {
 
         uint now = (uint) time(NULL);
         root = new Directory(ROOT_PAGE, "/", -1, now, now, now);
+        bitmap_set(ROOT_PAGE, 0);
         write_dir(root);
     }
 
@@ -116,7 +116,7 @@ int Filesystem::free_page() {
 
 File* Filesystem::get_file(std::string path) {
     if (path == "/")
-        return dynamic_cast<File*>(root);
+        return (File*)(root);
     while (path.back() == '/')
         path.pop_back();
     std::stringstream ss(path);
@@ -126,12 +126,16 @@ File* Filesystem::get_file(std::string path) {
 
     ss.get(); // Discard first '/'
     while(std::getline(ss, name, '/')) {
+
         d = dynamic_cast<Directory*>(f);
         if (!d || d->files.find(name) == d->files.end()) {
+
             std::cerr << "Não consigo achar o arquivo " << path << std::endl;
             return nullptr;
         }
         f = std::get<0>(d->files.at(name));
+        if (!f)
+            f = read_file(std::get<2>(d->files.at(name)));
     }
     return f;
 }
@@ -180,7 +184,7 @@ void Filesystem::mkdir(std::string path) {
 void Filesystem::ls(std::string path) {
     File *f = get_file(path);
     Directory *d;
-    
+
     if (f->type == 'd')
         (d = (Directory *) f)->ls();
     else
@@ -188,7 +192,7 @@ void Filesystem::ls(std::string path) {
 }
 
 void Filesystem::write_dir(Directory *d) {
-    /* data format: 
+    /* data format:
      * Separate the following fields with "-" (including one at the
      * end):
      *
@@ -233,6 +237,9 @@ void Filesystem::write_dir(Directory *d) {
 }
 
 File* Filesystem::read_file(int page) {
+    if (page == -1)
+        return nullptr;
+
     char c, type;
     int next_block, block;
     uint size;
@@ -254,16 +261,17 @@ File* Filesystem::read_file(int page) {
         Directory *d = new Directory(page, name, next_block, ct, mt, at);
 
         name.clear();
-        type = fs->get();
-        fs->read((char*) &block, sizeof(int));
-        while((c = fs->get()) != '-') {
-            if (c != '|')
-                name += c;
-            else {
-                d->files[name] = {nullptr, type, block};
-                name.clear();
-                type = fs->get();
-                fs->read((char*) &block, sizeof(int));
+        if ((type = fs->get()) != '-') { // check if there is any file in dir
+            fs->read((char*) &block, sizeof(int));
+            while((c = fs->get()) != '-') {
+                if (c != '|')
+                    name += c;
+                else {
+                    d->files[name] = {nullptr, type, block};
+                    name.clear();
+                    type = fs->get();
+                    fs->read((char*) &block, sizeof(int));
+                }
             }
         }
         return (File *) d;
@@ -288,5 +296,3 @@ File* Filesystem::read_file(int page) {
     }
     return nullptr;
 }
-
-

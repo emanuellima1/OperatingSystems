@@ -10,8 +10,9 @@ Directory::Directory(int page, std::string name, int next_block,
 Directory::~Directory() {}
 
 void Directory::ls() {
-    for (auto& [name, f] : files)
+    for (auto& [name, t] : files) {
         std::cout << name << std::endl;
+    }
 }
 
 

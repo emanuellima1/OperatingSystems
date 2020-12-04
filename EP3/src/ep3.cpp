@@ -3,8 +3,6 @@
 #include <string>
 #include <sstream>
 
-#include "../include/directory.hpp"
-#include "../include/regular_file.hpp"
 #include "../include/filesystem.hpp"
 
 int main()
@@ -38,6 +36,14 @@ int main()
         else if (token == "ls") {
             token_stream >> token;
             fs->ls(token);
+        }
+        else if (token == "touch") {
+            token_stream >> token;
+            fs->touch(token);
+        }
+        else if (token == "rm") {
+            token_stream >> token;
+            fs->touch(token);
         }
 
         else {
