@@ -21,6 +21,7 @@ public:
     void df();
     void mkdir(std::string); // write regular file to fs
     void ls(std::string path);
+    void touch(std::string path);
 
 private:
     Directory *root;
@@ -39,8 +40,7 @@ private:
     File* get_file(std::string path);
     std::string filename(std::string path);
     std::string dirname(std::string path);
-    void write_dir(Directory*); // write directory to fs
-    void write_file(RegularFile*); // write regular file to fs
-    File* read_file(int page); 
+    void write_file(File*); // write file to fs
+    File* read_file(int page);
 };
 

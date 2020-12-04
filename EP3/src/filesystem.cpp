@@ -33,7 +33,7 @@ Filesystem::Filesystem(std::string filename) {
         uint now = (uint) time(NULL);
         root = new Directory(ROOT_PAGE, "/", -1, now, now, now);
         bitmap_set(ROOT_PAGE, 0);
-        write_dir(root);
+        write_file(root);
     }
 
     else {
@@ -128,11 +128,8 @@ File* Filesystem::get_file(std::string path) {
     while(std::getline(ss, name, '/')) {
 
         d = dynamic_cast<Directory*>(f);
-        if (!d || d->files.find(name) == d->files.end()) {
-
-            std::cerr << "Não consigo achar o arquivo " << path << std::endl;
+        if (!d || d->files.find(name) == d->files.end())
             return nullptr;
-        }
         f = std::get<0>(d->files.at(name));
         if (!f)
             f = read_file(std::get<2>(d->files.at(name)));
@@ -176,8 +173,8 @@ void Filesystem::mkdir(std::string path) {
 
     d = new Directory(p, name, -1, now, now, now);
     parent->files[name] = {d, 'd', p};
-    write_dir(d);
-    write_dir(parent);
+    write_file(d);
+    write_file(parent);
     bitmap_set(p, 0);
 }
 
@@ -191,7 +188,34 @@ void Filesystem::ls(std::string path) {
         std::cout << f->name << std::endl;
 }
 
-void Filesystem::write_dir(Directory *d) {
+void Filesystem::touch(std::string path) {
+    RegularFile *f;
+    uint now = (uint) time(NULL);
+
+    if ((f = (RegularFile*) get_file(path))) {
+        f->access_time = now;
+        return;
+    }
+
+    int p = free_page();
+
+    if (p == -1)
+        std::cerr << "Não há espaço disponível no sistema de arquivos. Cancelando..."<< std::endl;
+
+    Directory *parent = dynamic_cast<Directory*>(get_file(dirname(path)));
+    std::string name = filename(path);
+
+    f = new RegularFile(p, name, -1, now, now, now);
+    parent->files[name] = {f, 'f', p};
+    write_file(f);
+    write_file(parent);
+    bitmap_set(p, 0);
+}
+
+
+void Filesystem::write_file(File *f) {
+    //TODO: Se o tamanho do parente ultrapassar 4K, usar um novo bloco
+
     /* data format:
      * Separate the following fields with "-" (including one at the
      * end):
@@ -212,26 +236,43 @@ void Filesystem::write_dir(Directory *d) {
      *
      * without any separators (since type and block have fixed size)
      * */
+    uint size;
+    char type = f->type;
 
-    fs->seekp(d->page * PAGE_SIZE);
-    fs->put((char) d->next_block);
-    fs->write("-d-", 3);
-    fs->write(d->name.c_str(), d->name.length());
+    fs->seekp(f->page * PAGE_SIZE);
+    fs->put((char) f->next_block);
     fs->put('-');
-    fs->write((char*) &d->creation_time, sizeof(uint));
+    fs->put(type);
     fs->put('-');
-    fs->write((char*) &d->modification_time, sizeof(uint));
+    if (type == 'f') {
+        size = ((RegularFile*) f)->size();
+        fs->write((char*) &size, sizeof(uint));
+        fs->put('-');
+    }
+    fs->write(f->name.c_str(), f->name.length());
     fs->put('-');
-    fs->write((char*) &d->access_time, sizeof(uint));
+    fs->write((char*) &f->creation_time, sizeof(uint));
     fs->put('-');
-    if (!d->files.empty()) {
-        for (auto& [name, t] : d->files) {
-            // t is a tuple<File*,char type, int block>
-            fs->put(std::get<1>(t));
-            fs->write((char*) &(std::get<2>(t)), sizeof(int));
-            fs->write(std::get<0>(t)->name.c_str(), std::get<0>(t)->name.length());
-            fs->put('|');
+    fs->write((char*) &f->modification_time, sizeof(uint));
+    fs->put('-');
+    fs->write((char*) &f->access_time, sizeof(uint));
+    fs->put('-');
+    if (type == 'd') {
+        Directory *d = (Directory*) f;
+        if (!d->files.empty()) {
+            for (auto& [name, t] : d->files) {
+                // t is a tuple<File*,char type, int block>
+                fs->put(std::get<1>(t));
+                fs->write((char*) &(std::get<2>(t)), sizeof(int));
+                fs->write(std::get<0>(t)->name.c_str(),
+                          std::get<0>(t)->name.length());
+                fs->put('|');
+            }
         }
+    }
+    else if (type == 'f') {
+        RegularFile *rf = (RegularFile*) f;
+        fs->write(rf->content.c_str(), rf->content.length());
     }
     fs->put('-');
 }
@@ -296,3 +337,4 @@ File* Filesystem::read_file(int page) {
     }
     return nullptr;
 }
+
