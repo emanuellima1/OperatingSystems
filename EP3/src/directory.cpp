@@ -5,7 +5,7 @@
 Directory::Directory(int page, std::string name, int next_block, 
                      uint creation_time, uint modification_time, uint access_time,
                      Directory *parent)
-    : File(page, name, next_block)
+    : File(page, name, next_block, 'd')
     , parent(parent)
     , creation_time(creation_time)
     , modification_time(modification_time)

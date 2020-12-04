@@ -6,7 +6,7 @@
 class RegularFile: public File {
 public:
     // Creates a File. Called on touch (if the file doesn't exist).
-    RegularFile(int page, std::string name, int next_block, 
+    RegularFile(int page, std::string name, int next_block,
               uint creation_time, uint modification_time, uint access_time,
               Directory *parent);
 
@@ -25,7 +25,11 @@ public:
     // Returns the name of *this.
     std::string get_name();
 
+    uint size();
+    std::string content;
+
 private:
     std::string name;
-    uint size, creation_time, modification_time, access_time;
+    Directory *parent;
+    uint creation_time, modification_time, access_time;
 };

@@ -3,6 +3,7 @@
 #include <string>
 #include <fstream>
 #include <map>
+#include <tuple>
 
 #include "file.hpp"
 
@@ -22,7 +23,8 @@ public:
     void find(std::string filename);
 
     void add_file(File *file);
-    std::map<std::string, File*> files;
+    // Store File object, type and block
+    std::map<std::string, std::tuple<File*, char, int>> files;
     Directory *parent;
     uint creation_time, modification_time, access_time;
 };
