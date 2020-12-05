@@ -46,4 +46,5 @@ private:
     std::string dirname(std::string path);
     void write_file(File*); // write file to fs
     File* read_file(int page);
+    void delete_dir(Directory *d);
 };
