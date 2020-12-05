@@ -8,4 +8,8 @@ File::File(int page, std::string name, int next_block, char type,
     , type (type)
     , creation_time(creation_time)
     , modification_time(modification_time)
-    , access_time(access_time) {}
+    , access_time(access_time)
+{
+    if (name.length() > MAX_FILENAME)
+        name.erase(MAX_FILENAME);
+}

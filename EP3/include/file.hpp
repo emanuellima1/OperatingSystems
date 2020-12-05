@@ -2,6 +2,8 @@
 
 #include <string>
 
+#define MAX_FILENAME 255
+
 class File {
 public:
     // Creates a File.
