@@ -18,7 +18,7 @@ Filesystem::Filesystem(std::string filename)
 
         // We could've used bitmap_set and fat_set here, but this way
         // we skip seekp every write
-        for (uint i = 0; i < MAX_PAGES/8; i++) {
+        for (uint i = 0; i < BITMAP_SIZE; i++) {
             fs->put((char) 0xff);
             bitmap[i] = (char) 0xff;
         }
@@ -42,7 +42,7 @@ Filesystem::Filesystem(std::string filename)
     }
 
     else {
-        for (uint i = 0; i < MAX_PAGES/8; i++)
+        for (uint i = 0; i < BITMAP_SIZE; i++)
             bitmap[i] = fs->get();
         for (uint i = 0; i < MAX_PAGES; i++)
             fs->read((char *) &fat[i], sizeof(int));
@@ -50,17 +50,14 @@ Filesystem::Filesystem(std::string filename)
     }
 }
 
-Filesystem::~Filesystem()
-{
-    // TODO: recursively delete files
+Filesystem::~Filesystem() {
     delete fs;
 }
 
 void Filesystem::df() { }
 
-bool Filesystem::bitmap_get(int i)
-{
-    return bitmap[i / 8] & (1 << (i % 8));
+bool Filesystem::bitmap_get(int i) {
+    return bitmap[i/CHAR_BIT] & (1 << (i % CHAR_BIT));
 }
 
 bool Filesystem::bitmap_get(int i, int k)
@@ -73,18 +70,17 @@ bool Filesystem::bitmap_set(int i, bool val)
     if (i >= MAX_PAGES)
         return false;
     if (val)
-        bitmap[i / 8] |= 1 << (i % 8);
+        bitmap[i/CHAR_BIT] |= 1 << (i % CHAR_BIT);
     else
-        bitmap[i / 8] &= ~(1 << (i % 8));
+        bitmap[i/CHAR_BIT] &= ~(1 << (i % CHAR_BIT));
 
-    fs->seekp(i / 8);
-    fs->put(bitmap[i / 8]);
+    fs->seekp(i/CHAR_BIT);
+    fs->put(bitmap[i/CHAR_BIT]);
     return true;
 }
 
-bool Filesystem::bitmap_set(int i, int k, bool val)
-{
-    if (i * 8 + k >= MAX_PAGES)
+bool Filesystem::bitmap_set(int i, int k, bool val) {
+    if (i*CHAR_BIT + k >= MAX_PAGES)
         return false;
     if (val)
         bitmap[i] = bitmap[i] | 1 << k;
@@ -112,14 +108,13 @@ int Filesystem::fat_get(int i)
     return fat[i];
 }
 
-int Filesystem::free_page()
-{
-    for (int i = 0; i < MAX_PAGES / 8; i++) {
+int Filesystem::free_page() {
+    for (int i = 0; i < BITMAP_SIZE; i++) {
         if (bitmap[i]) {
-            for (int k = 0; k < 8; k++) {
+            for (int k = 0; k < CHAR_BIT; k++) {
                 if (bitmap_get(i, k)) {
                     bitmap_set(i, k, 0);
-                    return 8 * i + k;
+                    return CHAR_BIT*i + k;
                 }
             }
         }
@@ -137,6 +132,7 @@ File* Filesystem::get_file(std::string path)
     std::string name, error_dir;
     Directory* d;
     File* f = root;
+
 
     ss.get(); // Discard first '/'
     while (std::getline(ss, name, '/')) {
@@ -182,7 +178,7 @@ void Filesystem::mkdir(std::string path) {
     if (p == -1)
         std::cerr << "Não há espaço disponível no sistema de arquivos. Cancelando..." << std::endl;
 
-    Directory* parent = dynamic_cast<Directory*>(get_file(dirname(path)));
+    Directory *parent = dynamic_cast<Directory*>(get_file(dirname(path)));
     std::string name = filename(path);
     uint now = (uint)time(NULL);
 
@@ -198,8 +194,9 @@ void Filesystem::ls(std::string path)
     File* f = get_file(path);
     Directory* d;
 
-    if (f->type == 'd')
-        (d = (Directory*)f)->ls();
+    if (f->type == 'd') {
+        (d = (Directory *) f)->ls();
+    }
     else
         std::cout << f->name << std::endl;
 }
@@ -301,6 +298,9 @@ void Filesystem::write_file(File *f) {
         if (!d->files.empty()) {
             for (auto& [name, t] : d->files) {
                 // t is a tuple<File* f,char type, int block>
+                if (!std::get<0>(t))
+                    std::get<0>(t) = read_file(std::get<2>(t));
+
                 temp.put(std::get<1>(t));
                 temp.write((char*) &(std::get<2>(t)), sizeof(int));
                 temp.write(std::get<0>(t)->name.c_str(),
@@ -367,7 +367,6 @@ File* Filesystem::read_file(int page)
 
     temp.read((char *) &next_block, sizeof(int));
     temp.get();
-
     if (temp.get() == 'd') {
         temp.get();
         std::getline(temp, name, '-');
@@ -413,7 +412,6 @@ File* Filesystem::read_file(int page)
         temp.get();
         RegularFile *f = new RegularFile(page, name, next_block, ct, mt, at);
         temp.get();
-        name.clear();
         std::getline(*fs, f->content, '-');
         return (File*)f;
     }

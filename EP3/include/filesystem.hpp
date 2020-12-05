@@ -1,12 +1,16 @@
 #pragma once
 
+#include <string>
+#include <climits>
 #include "directory.hpp"
 #include "regular_file.hpp"
 #include <string>
 
 #define MAX_PAGES 25000 // Maximum number of 4.0K pages (total 100MB)
 #define PAGE_SIZE 4000
-#define ROOT_PAGE (MAX_PAGES/8 + MAX_PAGES * sizeof(int))/PAGE_SIZE + 1
+// The following use the form (n + d - 1)/d to get the ceiling of n/d
+#define BITMAP_SIZE (MAX_PAGES + CHAR_BIT - 1)/CHAR_BIT
+#define ROOT_PAGE ((BITMAP_SIZE + MAX_PAGES * sizeof(int)) + PAGE_SIZE - 1)/PAGE_SIZE
 
 class Filesystem {
 public:
@@ -26,7 +30,7 @@ public:
 private:
     Directory *root;
     std::fstream *fs;
-    char bitmap[MAX_PAGES/8]; //TODO: this should be rounded up
+    char bitmap[BITMAP_SIZE];
     int fat[MAX_PAGES];
 
     bool bitmap_get(int);
