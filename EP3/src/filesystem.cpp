@@ -52,6 +52,17 @@ Filesystem::Filesystem(std::string filename)
 
 Filesystem::~Filesystem() {
     delete fs;
+    delete_dir(root);
+}
+void Filesystem::delete_dir(Directory *d) {
+    for (auto& [name, t] : d->files)
+        if (std::get<0>(t)) {
+            if (std::get<1>(t) == 'd')
+                delete_dir((Directory *) std::get<0>(t));
+            else if (std::get<1>(t) == 'f')
+                delete std::get<0>(t);
+        }
+    delete d;
 }
 
 void Filesystem::df() { }
