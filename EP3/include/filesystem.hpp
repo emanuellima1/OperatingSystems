@@ -1,13 +1,12 @@
 #pragma once
 
-#include <string>
 #include "directory.hpp"
 #include "regular_file.hpp"
-
+#include <string>
 
 #define MAX_PAGES 25000 // Maximum number of 4.0K pages (total 100MB)
 #define PAGE_SIZE 4000
-#define ROOT_PAGE (MAX_PAGES/8 + MAX_PAGES)/PAGE_SIZE + 1
+#define ROOT_PAGE (MAX_PAGES / 8 + MAX_PAGES) / PAGE_SIZE + 1
 
 class Filesystem {
 public:
@@ -22,11 +21,12 @@ public:
     void mkdir(std::string); // write regular file to fs
     void ls(std::string path);
     void touch(std::string path);
+    void rm(std::string path);
 
 private:
-    Directory *root;
-    std::fstream *fs;
-    uint bitmap[MAX_PAGES/8];
+    Directory* root;
+    std::fstream* fs;
+    uint bitmap[MAX_PAGES / 8];
     int fat[MAX_PAGES];
 
     bool bitmap_get(int);
@@ -43,4 +43,3 @@ private:
     void write_file(File*); // write file to fs
     File* read_file(int page);
 };
-

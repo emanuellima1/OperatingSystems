@@ -1,18 +1,17 @@
-#include <array>
 #include <iostream>
-#include <string>
+#include <memory>
 #include <sstream>
+#include <string>
 
 #include "../include/filesystem.hpp"
 
 int main()
 {
     std::string command;
-    std::array<std::string, 12> possible_commands = { "mount", "cp", "mkdir", "rmdir", "cat", "touch", "rm", "ls", "find", "df", "umount", "sai" };
     std::stringstream token_stream;
     std::string token;
 
-    Filesystem *fs;
+    std::unique_ptr<Filesystem> fs;
 
     std::cout << "[ep3]: ";
     while (std::getline(std::cin, command)) {
@@ -25,34 +24,47 @@ int main()
             return 0;
         else if (token == "mount") {
             token_stream >> token;
-            fs = new Filesystem(token);
-        }
-        else if (token == "umount")
-            delete fs;
+            fs = std::make_unique<Filesystem>(token);
+        } else if (token == "umount")
+            fs.reset();
         else if (token == "mkdir") {
             token_stream >> token;
             fs->mkdir(token);
-        }
-        else if (token == "ls") {
+        } else if (token == "ls") {
             token_stream >> token;
             fs->ls(token);
-        }
-        else if (token == "touch") {
+        } else if (token == "touch") {
             token_stream >> token;
             fs->touch(token);
-        }
-        else if (token == "rm") {
+        } else if (token == "rm") {
             token_stream >> token;
             fs->rm(token);
-        }
-
-        else {
-            std::cout << "comando não identificado: " << token << std::endl;
+        } else if (token == "cat") {
+            token_stream >> token;
+            fs->cat(token);
+        } else if (token == "cp") {
+            token_stream >> token;
+            fs->cp(token);
+        } else if (token == "rmdir") {
+            token_stream >> token;
+            fs->rmdir(token);
+        } else if (token == "find") {
+            token_stream >> token;
+            fs->find(token);
+        } else if (token == "df") {
+            token_stream >> token;
+            fs->df(token);
+        } else if (token == "umount") {
+            token_stream >> token;
+            fs->umount(token);
+        } else {
+            std::cout << "comando não identificado: " << token << '\n';
         }
 
         std::cout << "[ep3]: ";
     }
-    std::cout << std::endl;
+
+    std::cout << '\n';
 
     return 0;
 }
