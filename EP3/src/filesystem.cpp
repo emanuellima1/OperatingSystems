@@ -269,42 +269,70 @@ void Filesystem::write_file(File* f)
      * */
     uint size;
     char type = f->type;
+    std::stringstream temp;
 
-    fs->seekp(f->page * PAGE_SIZE);
-    fs->put((char)f->next_block);
-    fs->put('-');
-    fs->put(type);
-    fs->put('-');
+    temp.write((char*) &f->next_block, sizeof(int));
+    temp.put('-');
+    temp.put(type);
+    temp.put('-');
     if (type == 'f') {
-        size = ((RegularFile*)f)->size();
-        fs->write((char*)&size, sizeof(uint));
-        fs->put('-');
+        size = ((RegularFile*) f)->size();
+        temp.write((char*) &size, sizeof(uint));
+        temp.put('-');
     }
-    fs->write(f->name.c_str(), f->name.length());
-    fs->put('-');
-    fs->write((char*)&f->creation_time, sizeof(uint));
-    fs->put('-');
-    fs->write((char*)&f->modification_time, sizeof(uint));
-    fs->put('-');
-    fs->write((char*)&f->access_time, sizeof(uint));
-    fs->put('-');
+    temp.write(f->name.c_str(), f->name.length());
+    temp.put('-');
+    temp.write((char*) &f->creation_time, sizeof(uint));
+    temp.put('-');
+    temp.write((char*) &f->modification_time, sizeof(uint));
+    temp.put('-');
+    temp.write((char*) &f->access_time, sizeof(uint));
+    temp.put('-');
     if (type == 'd') {
         Directory* d = (Directory*)f;
         if (!d->files.empty()) {
             for (auto& [name, t] : d->files) {
-                // t is a tuple<File*,char type, int block>
-                fs->put(std::get<1>(t));
-                fs->write((char*)&(std::get<2>(t)), sizeof(int));
-                fs->write(std::get<0>(t)->name.c_str(),
-                    std::get<0>(t)->name.length());
-                fs->put('|');
+                // t is a tuple<File* f,char type, int block>
+                temp.put(std::get<1>(t));
+                temp.write((char*) &(std::get<2>(t)), sizeof(int));
+                temp.write(std::get<0>(t)->name.c_str(),
+                          std::get<0>(t)->name.length());
+                temp.put('|');
             }
         }
-    } else if (type == 'f') {
-        RegularFile* rf = (RegularFile*)f;
-        fs->write(rf->content.c_str(), rf->content.length());
     }
-    fs->put('-');
+    else if (type == 'f') {
+        RegularFile *rf = (RegularFile*) f;
+        temp.write(rf->content.c_str(), rf->content.length());
+    }
+    temp.put('-');
+
+    int block = f->page, next_block;
+    char buff[PAGE_SIZE];
+    uint remaining = temp.str().length() - (uint) temp.tellg();
+
+    while (remaining > PAGE_SIZE) {
+        next_block = free_page();
+        if (next_block == -1) {
+            std::cerr << "Sistema de arquivos cheio. Cancelando..." << std::endl;
+            return;
+        }
+        fat_set(block, next_block);
+        bitmap_set(next_block, 0);
+
+        fs->seekp(block * PAGE_SIZE);
+        temp.read(buff, PAGE_SIZE);
+        fs->write(buff, PAGE_SIZE);
+
+        fs->seekp(block * PAGE_SIZE);
+        fs->write((char*) &next_block, sizeof(int));
+
+        block = next_block;
+        remaining -= PAGE_SIZE;
+    }
+    fs->seekp(block * PAGE_SIZE);
+    temp.read(buff, remaining);
+    fs->write(buff, remaining);
 }
 
 File* Filesystem::read_file(int page)
@@ -312,18 +340,30 @@ File* Filesystem::read_file(int page)
     if (page == -1)
         return nullptr;
 
+    int block = page;
+    std::stringstream temp;
+    char buff[PAGE_SIZE];
+
+    while (block != -1) {
+        fs->seekg(block * PAGE_SIZE);
+        fs->read(buff, PAGE_SIZE);
+        temp.write(buff, PAGE_SIZE);
+        block = fat[block];
+        std::cout << "fat[block] = " << block << std::endl;
+    }
+
     char c, type;
-    int next_block, block;
+    int next_block;
     uint size;
     std::string name;
     uint ct, mt, at;
 
-    fs->seekg(page * PAGE_SIZE);
-    next_block = (int)fs->get();
-    fs->get();
-    if (fs->get() == 'd') {
-        fs->get();
+    temp.read((char *) &next_block, sizeof(int));
+    temp.get();
+    if (temp.get() == 'd') {
+        temp.get();
         std::getline(*fs, name, '-');
+<<<<<<< HEAD
         fs->read((char*)&ct, sizeof(uint));
         fs->get();
         fs->read((char*)&mt, sizeof(uint));
@@ -336,22 +376,42 @@ File* Filesystem::read_file(int page)
         if ((type = fs->get()) != '-') { // check if there is any file in dir
             fs->read((char*)&block, sizeof(int));
             while ((c = fs->get()) != '-') {
+=======
+        temp.read((char*) &ct, sizeof(uint));
+        temp.get();
+        temp.read((char*) &mt, sizeof(uint));
+        temp.get();
+        temp.read((char*) &at, sizeof(uint));
+        temp.get();
+        Directory *d = new Directory(page, name, next_block, ct, mt, at);
+
+        name.clear();
+        if ((type = temp.get()) != '-') { // check if there is any file in dir
+            temp.read((char*) &block, sizeof(int));
+            while((c = temp.get()) != '-') {
+>>>>>>> dc12251 (EP3: Implement multiblock read_file)
                 if (c != '|')
                     name += c;
                 else {
                     d->files[name] = { nullptr, type, block };
                     name.clear();
+<<<<<<< HEAD
                     type = fs->get();
                     fs->read((char*)&block, sizeof(int));
+=======
+                    type = temp.get();
+                    temp.read((char*) &block, sizeof(int));
+>>>>>>> dc12251 (EP3: Implement multiblock read_file)
                 }
             }
         }
         return (File*)d;
     }
 
-    else if (fs->get() == 'f') {
-        fs->get();
+    else if (temp.get() == 'f') {
+        temp.get();
         std::getline(*fs, name, '-');
+<<<<<<< HEAD
         fs->read((char*)&size, sizeof(uint));
         fs->get();
         fs->read((char*)&ct, sizeof(uint));
@@ -362,6 +422,18 @@ File* Filesystem::read_file(int page)
         fs->get();
         RegularFile* f = new RegularFile(page, name, next_block, ct, mt, at);
         fs->get();
+=======
+        temp.read((char*) &size, sizeof(uint));
+        temp.get();
+        temp.read((char*) &ct, sizeof(uint));
+        temp.get();
+        temp.read((char*) &mt, sizeof(uint));
+        temp.get();
+        temp.read((char*) &at, sizeof(uint));
+        temp.get();
+        RegularFile *f = new RegularFile(page, name, next_block, ct, mt, at);
+        temp.get();
+>>>>>>> dc12251 (EP3: Implement multiblock read_file)
         name.clear();
         std::getline(*fs, f->content, '-');
         return (File*)f;
