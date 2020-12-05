@@ -241,17 +241,7 @@ void Filesystem::rm(std::string path)
     std::cout << f << "\n";
 }
 
-void Filesystem::write_file(File* f)
-{
-    //TODO: Se o tamanho do parente ultrapassar 4K, usar um novo bloco
-
-=======
-
-}
-
-
 void Filesystem::write_file(File *f) {
->>>>>>> 0fd6a19 (EP3: Store FAT entries as ints)
     /* data format:
      * Separate the following fields with "-" (including one at the
      * end):
@@ -338,6 +328,7 @@ void Filesystem::write_file(File *f) {
         block = next_block;
         remaining -= PAGE_SIZE;
     }
+
     fs->seekp(block * PAGE_SIZE);
     temp.read(buff, remaining);
     fs->write(buff, remaining);
@@ -387,8 +378,6 @@ File* Filesystem::read_file(int page)
                 else {
                     d->files[name] = { nullptr, type, block };
                     name.clear();
-                    type = temp.get();
-                    temp.read((char*) &block, sizeof(int));
                     if ((type = temp.get()) != '-')
                         temp.read((char*) &block, sizeof(int));
                     else
