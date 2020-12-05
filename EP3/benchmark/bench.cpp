@@ -104,11 +104,31 @@ void exp_empty(std::string filename)
     }
 
     std::ofstream file("results_empty.csv");
+    file << "results_copy_1" << ','
+         << "results_copy_10" << ','
+         << "results_copy_30" << ','
+         << "results_rm_1" << ','
+         << "results_rm_10" << ','
+         << "results_rm_30" << ','
+         << "results_rm_dir_nofile" << ','
+         << "results_rm_dir_file" << ','
+         << '\n';
+    for (uint i = 0; i < EXECS; i++) {
+        file << results_copy_1[i] << ','
+             << results_copy_10[i] << ','
+             << results_copy_30[i] << ','
+             << results_rm_1[i] << ','
+             << results_rm_10[i] << ','
+             << results_rm_30[i] << ','
+             << results_rm_dir_nofile[i] << ','
+             << results_rm_dir_file[i] << ','
+             << '\n';
+    }
+    file.close();
 };
 
 void exp_10(std::string filename)
 {
-    // TODO: Populate fs (10MB)
     // TODO: Fix function calls
 
     std::unique_ptr<Filesystem> fs1 = std::make_unique<Filesystem>(filename);
@@ -119,6 +139,15 @@ void exp_10(std::string filename)
     std::unique_ptr<Filesystem> fs6 = std::make_unique<Filesystem>(filename);
     std::unique_ptr<Filesystem> fs7 = std::make_unique<Filesystem>(filename);
     std::unique_ptr<Filesystem> fs8 = std::make_unique<Filesystem>(filename);
+
+    fs1->cp(source_file_10, dest);
+    fs2->cp(source_file_10, dest);
+    fs3->cp(source_file_10, dest);
+    fs4->cp(source_file_10, dest);
+    fs5->cp(source_file_10, dest);
+    fs6->cp(source_file_10, dest);
+    fs7->cp(source_file_10, dest);
+    fs8->cp(source_file_10, dest);
 
     std::array<double, EXECS> results_copy_1;
     std::array<double, EXECS> results_copy_10;
@@ -176,11 +205,33 @@ void exp_10(std::string filename)
         fs8->rmdir(file_30);
         var = timer.stop();
     }
+
+    std::ofstream file("results_10.csv");
+    file << "results_copy_1" << ','
+         << "results_copy_10" << ','
+         << "results_copy_30" << ','
+         << "results_rm_1" << ','
+         << "results_rm_10" << ','
+         << "results_rm_30" << ','
+         << "results_rm_dir_nofile" << ','
+         << "results_rm_dir_file" << ','
+         << '\n';
+    for (uint i = 0; i < EXECS; i++) {
+        file << results_copy_1[i] << ','
+             << results_copy_10[i] << ','
+             << results_copy_30[i] << ','
+             << results_rm_1[i] << ','
+             << results_rm_10[i] << ','
+             << results_rm_30[i] << ','
+             << results_rm_dir_nofile[i] << ','
+             << results_rm_dir_file[i] << ','
+             << '\n';
+    }
+    file.close();
 };
 
-void exp_30(std::string filename)
+void exp_50(std::string filename)
 {
-    // TODO: Populate fs (30MB)
     // TODO: Fix function calls
 
     std::unique_ptr<Filesystem> fs1 = std::make_unique<Filesystem>(filename);
@@ -191,6 +242,15 @@ void exp_30(std::string filename)
     std::unique_ptr<Filesystem> fs6 = std::make_unique<Filesystem>(filename);
     std::unique_ptr<Filesystem> fs7 = std::make_unique<Filesystem>(filename);
     std::unique_ptr<Filesystem> fs8 = std::make_unique<Filesystem>(filename);
+
+    fs1->cp(source_file_50, dest);
+    fs2->cp(source_file_50, dest);
+    fs3->cp(source_file_50, dest);
+    fs4->cp(source_file_50, dest);
+    fs5->cp(source_file_50, dest);
+    fs6->cp(source_file_50, dest);
+    fs7->cp(source_file_50, dest);
+    fs8->cp(source_file_50, dest);
 
     std::array<double, EXECS> results_copy_1;
     std::array<double, EXECS> results_copy_10;
@@ -248,17 +308,40 @@ void exp_30(std::string filename)
         fs8->rmdir(file_30);
         var = timer.stop();
     }
+
+    std::ofstream file("results_50.csv");
+    file << "results_copy_1" << ','
+         << "results_copy_10" << ','
+         << "results_copy_30" << ','
+         << "results_rm_1" << ','
+         << "results_rm_10" << ','
+         << "results_rm_30" << ','
+         << "results_rm_dir_nofile" << ','
+         << "results_rm_dir_file" << ','
+         << '\n';
+    for (uint i = 0; i < EXECS; i++) {
+        file << results_copy_1[i] << ','
+             << results_copy_10[i] << ','
+             << results_copy_30[i] << ','
+             << results_rm_1[i] << ','
+             << results_rm_10[i] << ','
+             << results_rm_30[i] << ','
+             << results_rm_dir_nofile[i] << ','
+             << results_rm_dir_file[i] << ','
+             << '\n';
+    }
+    file.close();
 };
 
 int main()
 {
     std::string filename;
 
-    exp_empty(filename);
+    exp_empty("empty_fs");
 
-    exp_10(filename);
+    exp_10("10_fs");
 
-    exp_30(filename);
+    exp_50("50_fs");
 
     return 0;
 }
