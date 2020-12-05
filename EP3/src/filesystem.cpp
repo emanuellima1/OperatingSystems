@@ -15,19 +15,23 @@ Filesystem::Filesystem(std::string filename)
             std::cerr << "Não consegui abrir o arquivo " << filename << std::endl;
             exit(EXIT_FAILURE);
         }
-        // First 8 pages are used by bitmap and fat
-        // this should be in function of ROOT_PAGE
-        bitmap[0] = 0x00;
-        fs->put((char)0x00);
-        for (uint i = 1; i < MAX_PAGES / 8; i++) {
-            fs->put((char)0xff);
-            bitmap[i] = 0xff;
+
+        // We could've used bitmap_set and fat_set here, but this way
+        // we skip seekp every write
+        for (uint i = 0; i < MAX_PAGES/8; i++) {
+            fs->put((char) 0xff);
+            bitmap[i] = (char) 0xff;
         }
 
+        int m1 = -1;
         for (uint i = 0; i < MAX_PAGES; i++) {
-            fs->put((char)-1);
+            fs->write((char*) &m1, sizeof(int));
             fat[i] = -1;
         }
+
+        for (uint i = 0; i < ROOT_PAGE; i++)
+            bitmap_set(i, 0);
+
         fs->close();
         fs->open(filename, std::ios::in | std::ios::out | std::ios::binary);
 
@@ -38,11 +42,11 @@ Filesystem::Filesystem(std::string filename)
     }
 
     else {
-        for (uint i = 0; i < MAX_PAGES / 8; i++)
-            bitmap[i] = (uint)fs->get();
+        for (uint i = 0; i < MAX_PAGES/8; i++)
+            bitmap[i] = fs->get();
         for (uint i = 0; i < MAX_PAGES; i++)
-            fat[i] = (uint)fs->get();
-        root = (Directory*)read_file(ROOT_PAGE);
+            fs->read((char *) &fat[i], sizeof(int));
+        root = (Directory *) read_file(ROOT_PAGE);
     }
 }
 
@@ -96,8 +100,8 @@ int Filesystem::fat_set(int i, int val)
     if (i >= MAX_PAGES)
         return -1;
     fat[i] = val;
-    fs->seekp(MAX_PAGES + i);
-    fs->put(val);
+    fs->seekp(MAX_PAGES + (i * sizeof(int)));
+    fs->write((char*) &val, sizeof(int));
     return val;
 }
 
@@ -172,10 +176,8 @@ std::string Filesystem::dirname(std::string name)
     return f;
 }
 
-void Filesystem::mkdir(std::string path)
-{
-    //TODO: Se o tamanho do parente ultrapassar 4K, usar um novo bloco
-    Directory* d;
+void Filesystem::mkdir(std::string path) {
+    Directory *d;
     int p = free_page();
     if (p == -1)
         std::cerr << "Não há espaço disponível no sistema de arquivos. Cancelando..." << std::endl;
@@ -234,8 +236,7 @@ void Filesystem::rm(std::string path)
     if ((f = get_file(path))) {
         /* if ((f = dynamic_cast<RegularFile*>(get_file(path)))) { */
 
-        parent = (Directory*)get_file(dirname(path));
-        std::cout << "parent: " << parent->name << "\n";
+        parent = (Directory*) get_file(dirname(path));
         parent->files.erase(f->name);
         bitmap_set(f->page, 1);
         delete f;
@@ -247,6 +248,13 @@ void Filesystem::write_file(File* f)
 {
     //TODO: Se o tamanho do parente ultrapassar 4K, usar um novo bloco
 
+=======
+
+}
+
+
+void Filesystem::write_file(File *f) {
+>>>>>>> 0fd6a19 (EP3: Store FAT entries as ints)
     /* data format:
      * Separate the following fields with "-" (including one at the
      * end):
@@ -349,7 +357,6 @@ File* Filesystem::read_file(int page)
         fs->read(buff, PAGE_SIZE);
         temp.write(buff, PAGE_SIZE);
         block = fat[block];
-        std::cout << "fat[block] = " << block << std::endl;
     }
 
     char c, type;
@@ -360,23 +367,10 @@ File* Filesystem::read_file(int page)
 
     temp.read((char *) &next_block, sizeof(int));
     temp.get();
+
     if (temp.get() == 'd') {
         temp.get();
-        std::getline(*fs, name, '-');
-<<<<<<< HEAD
-        fs->read((char*)&ct, sizeof(uint));
-        fs->get();
-        fs->read((char*)&mt, sizeof(uint));
-        fs->get();
-        fs->read((char*)&at, sizeof(uint));
-        fs->get();
-        Directory* d = new Directory(page, name, next_block, ct, mt, at);
-
-        name.clear();
-        if ((type = fs->get()) != '-') { // check if there is any file in dir
-            fs->read((char*)&block, sizeof(int));
-            while ((c = fs->get()) != '-') {
-=======
+        std::getline(temp, name, '-');
         temp.read((char*) &ct, sizeof(uint));
         temp.get();
         temp.read((char*) &mt, sizeof(uint));
@@ -389,19 +383,17 @@ File* Filesystem::read_file(int page)
         if ((type = temp.get()) != '-') { // check if there is any file in dir
             temp.read((char*) &block, sizeof(int));
             while((c = temp.get()) != '-') {
->>>>>>> dc12251 (EP3: Implement multiblock read_file)
                 if (c != '|')
                     name += c;
                 else {
                     d->files[name] = { nullptr, type, block };
                     name.clear();
-<<<<<<< HEAD
-                    type = fs->get();
-                    fs->read((char*)&block, sizeof(int));
-=======
                     type = temp.get();
                     temp.read((char*) &block, sizeof(int));
->>>>>>> dc12251 (EP3: Implement multiblock read_file)
+                    if ((type = temp.get()) != '-')
+                        temp.read((char*) &block, sizeof(int));
+                    else
+                        temp.unget();
                 }
             }
         }
@@ -411,18 +403,6 @@ File* Filesystem::read_file(int page)
     else if (temp.get() == 'f') {
         temp.get();
         std::getline(*fs, name, '-');
-<<<<<<< HEAD
-        fs->read((char*)&size, sizeof(uint));
-        fs->get();
-        fs->read((char*)&ct, sizeof(uint));
-        fs->get();
-        fs->read((char*)&mt, sizeof(uint));
-        fs->get();
-        fs->read((char*)&at, sizeof(uint));
-        fs->get();
-        RegularFile* f = new RegularFile(page, name, next_block, ct, mt, at);
-        fs->get();
-=======
         temp.read((char*) &size, sizeof(uint));
         temp.get();
         temp.read((char*) &ct, sizeof(uint));
@@ -433,7 +413,6 @@ File* Filesystem::read_file(int page)
         temp.get();
         RegularFile *f = new RegularFile(page, name, next_block, ct, mt, at);
         temp.get();
->>>>>>> dc12251 (EP3: Implement multiblock read_file)
         name.clear();
         std::getline(*fs, f->content, '-');
         return (File*)f;

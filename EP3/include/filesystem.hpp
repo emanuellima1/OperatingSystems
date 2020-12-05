@@ -6,7 +6,7 @@
 
 #define MAX_PAGES 25000 // Maximum number of 4.0K pages (total 100MB)
 #define PAGE_SIZE 4000
-#define ROOT_PAGE (MAX_PAGES / 8 + MAX_PAGES) / PAGE_SIZE + 1
+#define ROOT_PAGE (MAX_PAGES/8 + MAX_PAGES * sizeof(int))/PAGE_SIZE + 1
 
 class Filesystem {
 public:
@@ -24,9 +24,9 @@ public:
     void rm(std::string path);
 
 private:
-    Directory* root;
-    std::fstream* fs;
-    uint bitmap[MAX_PAGES / 8];
+    Directory *root;
+    std::fstream *fs;
+    char bitmap[MAX_PAGES/8]; //TODO: this should be rounded up
     int fat[MAX_PAGES];
 
     bool bitmap_get(int);
