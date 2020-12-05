@@ -44,7 +44,7 @@ int main()
             fs->cat(token);
         } else if (token == "cp") {
             token_stream >> token;
-            fs->cp(token);
+            fs->cp(source, dest);
         } else if (token == "rmdir") {
             token_stream >> token;
             fs->rmdir(token);
