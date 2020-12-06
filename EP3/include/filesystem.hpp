@@ -55,4 +55,9 @@ private:
     void find(Directory *d, std::string path, std::string search);
     uint dir_size(int page);
     void rm(RegularFile *);
+
+    void r_df(Directory *d);
+    int nfolders = 1;
+    int nfiles = 0;
+    int wasted_space = 0;
 };

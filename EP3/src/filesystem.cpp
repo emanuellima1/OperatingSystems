@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <iomanip>
 
 Filesystem::Filesystem(std::string filename)
 {
@@ -35,7 +36,7 @@ Filesystem::Filesystem(std::string filename)
         fs->close();
         fs->open(filename, std::ios::in | std::ios::out | std::ios::binary);
 
-        uint now = (uint)time(NULL);
+        time_t now = time(nullptr);
         root = new Directory(ROOT_PAGE, "/", now, now, now);
         write_file(root);
     }
@@ -55,17 +56,49 @@ Filesystem::~Filesystem() {
     delete_dir(root);
 }
 void Filesystem::delete_dir(Directory *d) {
-    for (auto& [name, t] : d->files)
+    for (auto& [name, t] : d->files) {
         if (std::get<0>(t)) {
             if (std::get<1>(t) == 'd')
                 delete_dir((Directory *) std::get<0>(t));
             else if (std::get<1>(t) == 'f')
                 delete std::get<0>(t);
         }
+    }
     delete d;
 }
 
-void Filesystem::df() { }
+void Filesystem::df() {
+    nfolders = 0;
+    nfiles = 0;
+    wasted_space = 0;
+    r_df(root);
+
+    int free_space = 0;
+    for (int i = ROOT_PAGE; i < MAX_PAGES; i++)
+        if (bitmap_get(i))
+            free_space += 4000;
+    std::cout << "Quantidade de diretórios: " << nfolders << std::endl;
+    std::cout << "Quantidade de arquivos:   " << nfiles << std::endl;
+    std::cout << "Espaço livre:             " << free_space << std::endl;
+    std::cout << "Espaço desperdiçado:      " << wasted_space << std::endl;
+}
+
+void Filesystem::r_df(Directory *d) {
+    for (auto& [name, t] : d->files) {
+        if (!std::get<0>(t))
+            std::get<0>(t) = read_file(std::get<2>(t));
+
+        if (std::get<1>(t) == 'd')
+            r_df((Directory*) std::get<0>(t));
+        else if (std::get<1>(t) == 'f') {
+            nfiles++;
+            wasted_space += std::get<0>(t)->wasted_space();
+        }
+
+    }
+    nfolders++;
+    wasted_space += d->wasted_space();
+}
 
 bool Filesystem::bitmap_get(int i) {
     return bitmap[i/CHAR_BIT] & (1 << (i % CHAR_BIT));
@@ -192,10 +225,11 @@ void Filesystem::mkdir(std::string path) {
 
     Directory *parent = dynamic_cast<Directory*>(get_file(dirname(path)));
     std::string name = filename(path);
-    uint now = (uint)time(NULL);
+    time_t now = time(nullptr);
 
     d = new Directory(p, name, now, now, now);
     parent->files[name] = { d, 'd', p };
+    parent->access_time = parent->modification_time = now;
     write_file(d);
     write_file(parent);
 }
@@ -204,7 +238,9 @@ void Filesystem::ls(std::string path)
 {
     File *base = get_file(path), *f;
 
-    std::cout << "f/d\tTamanho\tMod.\tNome" << std::endl;
+    std::tm tm;
+
+    std::cout << "f/d\tTamanho\tMod.\t\t\tNome" << std::endl;
     if (base && base->type == 'd') {
         for (auto& [name, t] : ((Directory*) base)->files) {
             f = std::get<0>(t);
@@ -216,7 +252,9 @@ void Filesystem::ls(std::string path)
             else if (f->type == 'f')
                 std::cout << "(f)\t" << ((RegularFile *) f)->size() << "\t";
 
-            std::cout << f->modification_time  << "\t";
+            tm = *std::localtime(&f->modification_time);
+            std::cout << std::put_time(&tm, "%c") << "\t";
+
             std::cout << f->name << std::endl;
         }
     }
@@ -227,7 +265,7 @@ void Filesystem::ls(std::string path)
 RegularFile *Filesystem::touch(std::string path)
 {
     RegularFile* f;
-    uint now = (uint)time(NULL);
+    time_t now = time(nullptr);
 
     if ((f = (RegularFile*)get_file(path))) {
         f->access_time = now;
@@ -244,6 +282,7 @@ RegularFile *Filesystem::touch(std::string path)
 
     f = new RegularFile(p, name, now, now, now);
     parent->files[name] = { f, 'f', p };
+    parent->access_time = parent->modification_time = now;
     write_file(f);
     write_file(parent);
     return f;
@@ -252,11 +291,14 @@ RegularFile *Filesystem::touch(std::string path)
 void Filesystem::rm(std::string path) {
     File* f;
     Directory* parent;
+    time_t now = time(nullptr);
+
     if ((f = get_file(path))) {
         parent = (Directory*) get_file(dirname(path));
         parent->files.erase(f->name);
-        write_file((File*) parent);
+        parent->access_time = parent->modification_time = now;
 
+        write_file((File*) parent);
         rm((RegularFile *) f);
     }
 }
@@ -296,8 +338,11 @@ void Filesystem::rmdir(std::string path) {
         return;
     rmdir(d);
 
+    time_t now = time(nullptr);
+
     Directory *parent = (Directory*) get_file(dirname(path));
     parent->files.erase(filename(path));
+    parent->access_time = parent->modification_time = now;
     write_file((File*) parent);
 }
 
@@ -385,11 +430,11 @@ void Filesystem::write_file(File *f) {
     }
     temp.write(f->name.c_str(), f->name.length());
     temp.put('-');
-    temp.write((char*) &f->creation_time, sizeof(uint));
+    temp.write((char*) &f->creation_time, sizeof(time_t));
     temp.put('-');
-    temp.write((char*) &f->modification_time, sizeof(uint));
+    temp.write((char*) &f->modification_time, sizeof(time_t));
     temp.put('-');
-    temp.write((char*) &f->access_time, sizeof(uint));
+    temp.write((char*) &f->access_time, sizeof(time_t));
     temp.put('-');
     if (type == 'd') {
         Directory* d = (Directory*)f;
@@ -421,7 +466,6 @@ void Filesystem::write_file(File *f) {
         if (next_block == -1) {
             next_block = free_page();
             if (next_block == -1) {
-                //TODO: fazer o arquivo não existir
                 std::cerr << "Sistema de arquivos cheio. Cancelando..." 
                           << std::endl;
                 return;
@@ -463,16 +507,16 @@ File* Filesystem::read_file(int page)
     char c, type;
     uint size;
     std::string name;
-    uint ct, mt, at;
+    time_t ct, mt, at;
 
     if ((type = temp.get()) == 'd') {
         temp.get();
         std::getline(temp, name, '-');
-        temp.read((char*) &ct, sizeof(uint));
+        temp.read((char*) &ct, sizeof(time_t));
         temp.get();
-        temp.read((char*) &mt, sizeof(uint));
+        temp.read((char*) &mt, sizeof(time_t));
         temp.get();
-        temp.read((char*) &at, sizeof(uint));
+        temp.read((char*) &at, sizeof(time_t));
         temp.get();
         Directory *d = new Directory(page, name, ct, mt, at);
 
@@ -500,11 +544,11 @@ File* Filesystem::read_file(int page)
         temp.read((char*) &size, sizeof(uint));
         temp.get();
         std::getline(temp, name, '-');
-        temp.read((char*) &ct, sizeof(uint));
+        temp.read((char*) &ct, sizeof(time_t));
         temp.get();
-        temp.read((char*) &mt, sizeof(uint));
+        temp.read((char*) &mt, sizeof(time_t));
         temp.get();
-        temp.read((char*) &at, sizeof(uint));
+        temp.read((char*) &at, sizeof(time_t));
         temp.get();
         RegularFile *f = new RegularFile(page, name, ct, mt, at);
         std::getline(temp, f->content, '-');

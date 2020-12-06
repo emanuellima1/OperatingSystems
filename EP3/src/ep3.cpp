@@ -11,7 +11,7 @@ int main()
     std::stringstream token_stream;
     std::string token, token2;
 
-    std::unique_ptr<Filesystem> fs;
+    Filesystem *fs;
 
     std::cout << "[ep3]: ";
     while (std::getline(std::cin, command)) {
@@ -24,9 +24,9 @@ int main()
             return 0;
         else if (token == "mount") {
             token_stream >> token;
-            fs = std::make_unique<Filesystem>(token);
+            fs = new Filesystem(token);
         } else if (token == "umount")
-            fs.reset();
+          delete fs;
         else if (token == "mkdir") {
             token_stream >> token;
             fs->mkdir(token);

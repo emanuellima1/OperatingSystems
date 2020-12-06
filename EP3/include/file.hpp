@@ -8,10 +8,12 @@ class File {
 public:
     // Creates a File.
     File(int page, std::string name, char type,
-         uint creation_time, uint modification_time, uint access_time);
+         time_t creation_time, time_t modification_time, time_t access_time);
     virtual ~File() {};
     int page;
     std::string name;
     char type;
-    uint creation_time, modification_time, access_time;
+    time_t creation_time, modification_time, access_time;
+
+    virtual int wasted_space() = 0;
 };
