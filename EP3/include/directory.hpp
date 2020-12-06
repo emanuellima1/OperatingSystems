@@ -15,14 +15,6 @@ public:
     // Destroys a Directory. Called on rmdir.
     ~Directory();
 
-    // Lists all files and directories inside *this.
-    void ls();
-
-    // Search for a file with name filename inside of *this
-    void find(std::string filename);
-
-    void add_file(File *file);
     // Store File object, type and block
     std::map<std::string, std::tuple<File*, char, int>> files;
-    uint creation_time, modification_time, access_time;
 };

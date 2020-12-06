@@ -9,7 +9,7 @@ int main()
 {
     std::string command;
     std::stringstream token_stream;
-    std::string token;
+    std::string token, token2;
 
     std::unique_ptr<Filesystem> fs;
 
@@ -44,19 +44,17 @@ int main()
             fs->cat(token);
         } else if (token == "cp") {
             token_stream >> token;
-            fs->cp(source, dest);
+            token_stream >> token2;
+            fs->cp(token, token2);
         } else if (token == "rmdir") {
             token_stream >> token;
             fs->rmdir(token);
         } else if (token == "find") {
             token_stream >> token;
-            fs->find(token);
+            token_stream >> token2;
+            fs->find(token, token2);
         } else if (token == "df") {
-            token_stream >> token;
-            fs->df(token);
-        } else if (token == "umount") {
-            token_stream >> token;
-            fs->umount(token);
+            fs->df();
         } else {
             std::cout << "comando não identificado: " << token << '\n';
         }

@@ -24,8 +24,12 @@ public:
     void df();
     void mkdir(std::string); // write regular file to fs
     void ls(std::string path);
-    void touch(std::string path);
+    RegularFile *touch(std::string path);
     void rm(std::string path);
+    void cat(std::string path);
+    void cp(std::string origin, std::string path);
+    void rmdir(std::string path);
+    void find(std::string path, std::string search);
 
 private:
     Directory *root;
@@ -47,4 +51,7 @@ private:
     void write_file(File*); // write file to fs
     File* read_file(int page);
     void delete_dir(Directory *d);
+    void rmdir(Directory *, int n = 0);
+    void find(Directory *d, std::string path, std::string search);
+    uint dir_size(int page);
 };

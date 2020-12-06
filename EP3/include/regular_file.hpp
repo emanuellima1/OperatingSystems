@@ -12,15 +12,6 @@ public:
     // Destroys a File. Called on rm.
     ~RegularFile();
 
-    // Copy *this into destination
-    void cp(RegularFile& destination);
-
-    // Shows the content of *this on the screen
-    void cat();
-
-    // Changes access_time to now (because the object already exists)
-    void touch();
-
     uint size();
 
     std::string content;
