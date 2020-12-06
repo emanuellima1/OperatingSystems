@@ -57,49 +57,64 @@ void exp_empty(std::string filename)
 
     for (auto&& var : results_copy_1) {
         Timer timer;
-        fs1->cp(source_file_1, dest);
+        fs1->cp("file_1", "/dest_file_1");
         var = timer.stop();
     }
 
     for (auto&& var : results_copy_10) {
         Timer timer;
-        fs2->cp(source_file_10, dest);
+        fs2->cp("file_10", "/dest_file_10");
         var = timer.stop();
     }
 
     for (auto&& var : results_copy_30) {
         Timer timer;
-        fs3->cp(source_file_1, dest);
+        fs3->cp("file_30", "/dest_file_30");
         var = timer.stop();
     }
 
     for (auto&& var : results_rm_1) {
         Timer timer;
-        fs4->rm(file_1);
+        fs4->rm("file_1");
         var = timer.stop();
     }
 
     for (auto&& var : results_rm_10) {
         Timer timer;
-        fs5->rm(file_10);
+        fs5->rm("file_10");
         var = timer.stop();
     }
 
     for (auto&& var : results_rm_30) {
         Timer timer;
-        fs6->rm(file_30);
+        fs6->rm("file_30");
         var = timer.stop();
+    }
+
+    std::string dir_name = "";
+    for (uint i = 0; i < 30; i++) {
+        fs7->mkdir(dir_name + '/' + std::to_string(i));
     }
 
     for (auto&& var : results_rm_dir_nofile) {
         Timer timer;
-        fs7->rmdir(file_30);
+        fs7->rmdir("/0");
         var = timer.stop();
+    }
+
+    dir_name = "";
+    std::string current_path;
+    for (uint j = 0; j < 30; j++) {
+        current_path = dir_name + '/' + std::to_string(j);
+        fs8->mkdir(current_path);
+        for (uint k = 0; k < 256; k++) {
+            fs8->touch(current_path + std::to_string(k));
+        }
     }
 
     for (auto&& var : results_rm_dir_file) {
         Timer timer;
-        fs8->rmdir(file_30);
+        fs8->rmdir("/0");
         var = timer.stop();
     }
 
@@ -125,12 +140,10 @@ void exp_empty(std::string filename)
              << '\n';
     }
     file.close();
-};
+}
 
 void exp_10(std::string filename)
 {
-    // TODO: Fix function calls
-
     std::unique_ptr<Filesystem> fs1 = std::make_unique<Filesystem>(filename);
     std::unique_ptr<Filesystem> fs2 = std::make_unique<Filesystem>(filename);
     std::unique_ptr<Filesystem> fs3 = std::make_unique<Filesystem>(filename);
@@ -140,14 +153,14 @@ void exp_10(std::string filename)
     std::unique_ptr<Filesystem> fs7 = std::make_unique<Filesystem>(filename);
     std::unique_ptr<Filesystem> fs8 = std::make_unique<Filesystem>(filename);
 
-    fs1->cp(source_file_10, dest);
-    fs2->cp(source_file_10, dest);
-    fs3->cp(source_file_10, dest);
-    fs4->cp(source_file_10, dest);
-    fs5->cp(source_file_10, dest);
-    fs6->cp(source_file_10, dest);
-    fs7->cp(source_file_10, dest);
-    fs8->cp(source_file_10, dest);
+    fs1->cp("file_10", "/dest_file_10");
+    fs2->cp("file_10", "/dest_file_10");
+    fs3->cp("file_10", "/dest_file_10");
+    fs4->cp("file_10", "/dest_file_10");
+    fs5->cp("file_10", "/dest_file_10");
+    fs6->cp("file_10", "/dest_file_10");
+    fs7->cp("file_10", "/dest_file_10");
+    fs8->cp("file_10", "/dest_file_10");
 
     std::array<double, EXECS> results_copy_1;
     std::array<double, EXECS> results_copy_10;
@@ -160,49 +173,64 @@ void exp_10(std::string filename)
 
     for (auto&& var : results_copy_1) {
         Timer timer;
-        fs1->cp(source_file_1, dest);
+        fs1->cp("file_1", "/dest_file_1");
         var = timer.stop();
     }
 
     for (auto&& var : results_copy_10) {
         Timer timer;
-        fs2->cp(source_file_10, dest);
+        fs2->cp("file_10", "/dest_file_10");
         var = timer.stop();
     }
 
     for (auto&& var : results_copy_30) {
         Timer timer;
-        fs3->cp(source_file_1, dest);
+        fs3->cp("file_30", "/dest_file_30");
         var = timer.stop();
     }
 
     for (auto&& var : results_rm_1) {
         Timer timer;
-        fs4->rm(file_1);
+        fs4->rm("file_1");
         var = timer.stop();
     }
 
     for (auto&& var : results_rm_10) {
         Timer timer;
-        fs5->rm(file_10);
+        fs5->rm("file_10");
         var = timer.stop();
     }
 
     for (auto&& var : results_rm_30) {
         Timer timer;
-        fs6->rm(file_30);
+        fs6->rm("file_30");
         var = timer.stop();
+    }
+
+    std::string dir_name = "";
+    for (uint i = 0; i < 30; i++) {
+        fs7->mkdir(dir_name + '/' + std::to_string(i));
     }
 
     for (auto&& var : results_rm_dir_nofile) {
         Timer timer;
-        fs7->rmdir(file_30);
+        fs7->rmdir("/0");
         var = timer.stop();
+    }
+
+    dir_name = "";
+    std::string current_path;
+    for (uint j = 0; j < 30; j++) {
+        current_path = dir_name + '/' + std::to_string(j);
+        fs8->mkdir(current_path);
+        for (uint k = 0; k < 256; k++) {
+            fs8->touch(current_path + std::to_string(k));
+        }
     }
 
     for (auto&& var : results_rm_dir_file) {
         Timer timer;
-        fs8->rmdir(file_30);
+        fs8->rmdir("/0");
         var = timer.stop();
     }
 
@@ -228,12 +256,10 @@ void exp_10(std::string filename)
              << '\n';
     }
     file.close();
-};
+}
 
 void exp_50(std::string filename)
 {
-    // TODO: Fix function calls
-
     std::unique_ptr<Filesystem> fs1 = std::make_unique<Filesystem>(filename);
     std::unique_ptr<Filesystem> fs2 = std::make_unique<Filesystem>(filename);
     std::unique_ptr<Filesystem> fs3 = std::make_unique<Filesystem>(filename);
@@ -243,14 +269,14 @@ void exp_50(std::string filename)
     std::unique_ptr<Filesystem> fs7 = std::make_unique<Filesystem>(filename);
     std::unique_ptr<Filesystem> fs8 = std::make_unique<Filesystem>(filename);
 
-    fs1->cp(source_file_50, dest);
-    fs2->cp(source_file_50, dest);
-    fs3->cp(source_file_50, dest);
-    fs4->cp(source_file_50, dest);
-    fs5->cp(source_file_50, dest);
-    fs6->cp(source_file_50, dest);
-    fs7->cp(source_file_50, dest);
-    fs8->cp(source_file_50, dest);
+    fs1->cp("file_50", "/dest_file_50");
+    fs2->cp("file_50", "/dest_file_50");
+    fs3->cp("file_50", "/dest_file_50");
+    fs4->cp("file_50", "/dest_file_50");
+    fs5->cp("file_50", "/dest_file_50");
+    fs6->cp("file_50", "/dest_file_50");
+    fs7->cp("file_50", "/dest_file_50");
+    fs8->cp("file_50", "/dest_file_50");
 
     std::array<double, EXECS> results_copy_1;
     std::array<double, EXECS> results_copy_10;
@@ -263,49 +289,64 @@ void exp_50(std::string filename)
 
     for (auto&& var : results_copy_1) {
         Timer timer;
-        fs1->cp(source_file_1, dest);
+        fs1->cp("file_1", "/dest_file_1");
         var = timer.stop();
     }
 
     for (auto&& var : results_copy_10) {
         Timer timer;
-        fs2->cp(source_file_10, dest);
+        fs2->cp("file_10", "/dest_file_10");
         var = timer.stop();
     }
 
     for (auto&& var : results_copy_30) {
         Timer timer;
-        fs3->cp(source_file_1, dest);
+        fs3->cp("file_30", "/dest_file_30");
         var = timer.stop();
     }
 
     for (auto&& var : results_rm_1) {
         Timer timer;
-        fs4->rm(file_1);
+        fs4->rm("file_1");
         var = timer.stop();
     }
 
     for (auto&& var : results_rm_10) {
         Timer timer;
-        fs5->rm(file_10);
+        fs5->rm("file_10");
         var = timer.stop();
     }
 
     for (auto&& var : results_rm_30) {
         Timer timer;
-        fs6->rm(file_30);
+        fs6->rm("file_30");
         var = timer.stop();
+    }
+
+    std::string dir_name = "";
+    for (uint i = 0; i < 30; i++) {
+        fs7->mkdir(dir_name + '/' + std::to_string(i));
     }
 
     for (auto&& var : results_rm_dir_nofile) {
         Timer timer;
-        fs7->rmdir(file_30);
+        fs7->rmdir("/0");
         var = timer.stop();
+    }
+
+    dir_name = "";
+    std::string current_path;
+    for (uint j = 0; j < 30; j++) {
+        current_path = dir_name + '/' + std::to_string(j);
+        fs8->mkdir(current_path);
+        for (uint k = 0; k < 256; k++) {
+            fs8->touch(current_path + std::to_string(k));
+        }
     }
 
     for (auto&& var : results_rm_dir_file) {
         Timer timer;
-        fs8->rmdir(file_30);
+        fs8->rmdir("/0");
         var = timer.stop();
     }
 
@@ -331,7 +372,7 @@ void exp_50(std::string filename)
              << '\n';
     }
     file.close();
-};
+}
 
 int main()
 {
