@@ -36,7 +36,7 @@ Filesystem::Filesystem(std::string filename)
         fs->open(filename, std::ios::in | std::ios::out | std::ios::binary);
 
         uint now = (uint)time(NULL);
-        root = new Directory(ROOT_PAGE, "/", -1, now, now, now);
+        root = new Directory(ROOT_PAGE, "/", now, now, now);
         bitmap_set(ROOT_PAGE, 0);
         write_file(root);
     }
@@ -44,8 +44,9 @@ Filesystem::Filesystem(std::string filename)
     else {
         for (uint i = 0; i < BITMAP_SIZE; i++)
             bitmap[i] = fs->get();
-        for (uint i = 0; i < MAX_PAGES; i++)
+        for (uint i = 0; i < MAX_PAGES; i++) {
             fs->read((char *) &fat[i], sizeof(int));
+        }
         root = (Directory *) read_file(ROOT_PAGE);
     }
 }
@@ -107,7 +108,7 @@ int Filesystem::fat_set(int i, int val)
     if (i >= MAX_PAGES)
         return -1;
     fat[i] = val;
-    fs->seekp(MAX_PAGES + (i * sizeof(int)));
+    fs->seekp(BITMAP_SIZE + (i * sizeof(int)));
     fs->write((char*) &val, sizeof(int));
     return val;
 }
@@ -194,7 +195,7 @@ void Filesystem::mkdir(std::string path) {
     std::string name = filename(path);
     uint now = (uint)time(NULL);
 
-    d = new Directory(p, name, -1, now, now, now);
+    d = new Directory(p, name, now, now, now);
     parent->files[name] = { d, 'd', p };
     write_file(d);
     write_file(parent);
@@ -206,7 +207,7 @@ void Filesystem::ls(std::string path)
 {
     File *base = get_file(path), *f;
 
-    std::cout << "f/d\tTamanho\tModificação\tNome" << std::endl;
+    std::cout << "f/d\tTamanho\tMod.\tNome" << std::endl;
     if (base && base->type == 'd') {
         for (auto& [name, t] : ((Directory*) base)->files) {
             f = std::get<0>(t);
@@ -244,7 +245,7 @@ RegularFile *Filesystem::touch(std::string path)
     Directory* parent = dynamic_cast<Directory*>(get_file(dirname(path)));
     std::string name = filename(path);
 
-    f = new RegularFile(p, name, -1, now, now, now);
+    f = new RegularFile(p, name, now, now, now);
     parent->files[name] = { f, 'f', p };
     write_file(f);
     write_file(parent);
@@ -253,8 +254,7 @@ RegularFile *Filesystem::touch(std::string path)
     return f;
 }
 
-void Filesystem::rm(std::string path)
-{
+void Filesystem::rm(std::string path) {
     File* f;
     Directory* parent;
     if ((f = get_file(path))) {
@@ -262,9 +262,20 @@ void Filesystem::rm(std::string path)
         parent->files.erase(f->name);
         write_file((File*) parent);
 
-        bitmap_set(f->page, 1);
-        delete f;
+        rm((RegularFile *) f);
     }
+}
+
+void Filesystem::rm(RegularFile *f) {
+    int block = f->page, next_block;
+    while (block != -1) {
+        next_block = fat[block];
+        bitmap_set(block, 1);
+        fat_set(block, -1);
+        block = next_block;
+    }
+
+    delete f;
 }
 
 void Filesystem::cat(std::string path) {
@@ -293,8 +304,6 @@ void Filesystem::rmdir(std::string path) {
     Directory *parent = (Directory*) get_file(dirname(path));
     parent->files.erase(filename(path));
     write_file((File*) parent);
-
-    delete d;
 }
 
 void Filesystem::rmdir(Directory * d, int n) {
@@ -308,15 +317,22 @@ void Filesystem::rmdir(Directory * d, int n) {
             std::cout << "arquivo ";
         std::cout << name << std::endl;
 
-        if (std::get<1>(t) == 'd' && !std::get<0>(t))
-            std::get<0>(t) = (Directory*) read_file(std::get<2>(t));
+        if (!std::get<0>(t))
+            std::get<0>(t) = read_file(std::get<2>(t));
         if (std::get<1>(t) == 'd')
             rmdir((Directory *) std::get<0>(t), n + 1);
-        if(std::get<0>(t))
-            delete std::get<0>(t);
-        bitmap_set(std::get<2>(t), 1);
-        fat_set(std::get<2>(t), -1);
+        else if (std::get<1>(t) == 'f')
+            rm((RegularFile *) std::get<0>(t));
     }
+
+    int block = d->page, next_block;
+    while (block != -1) {
+        next_block = fat[block];
+        bitmap_set(block, 1);
+        fat_set(block, -1);
+        block = next_block;
+    }
+    delete d;
 }
 
 void Filesystem::find(std::string path, std::string search) {
@@ -365,7 +381,7 @@ void Filesystem::write_file(File *f) {
     char type = f->type;
     std::stringstream temp;
 
-    temp.write((char*) &f->next_block, sizeof(int));
+    temp.write((char*) &fat[f->page], sizeof(int));
     temp.put('-');
     temp.put(type);
     temp.put('-');
@@ -409,7 +425,6 @@ void Filesystem::write_file(File *f) {
     uint remaining = temp.str().length() - (uint) temp.tellg();
 
     while (remaining > PAGE_SIZE) {
-        std::cout << "Escrevendo no bloco " << block << "..." << std::endl;
         next_block = free_page();
         if (next_block == -1) {
             std::cerr << "Sistema de arquivos cheio. Cancelando..." << std::endl;
@@ -456,6 +471,7 @@ File* Filesystem::read_file(int page)
     std::string name;
     uint ct, mt, at;
 
+
     temp.read((char *) &next_block, sizeof(int));
     temp.get();
     if ((type = temp.get()) == 'd') {
@@ -467,7 +483,7 @@ File* Filesystem::read_file(int page)
         temp.get();
         temp.read((char*) &at, sizeof(uint));
         temp.get();
-        Directory *d = new Directory(page, name, next_block, ct, mt, at);
+        Directory *d = new Directory(page, name, ct, mt, at);
 
         name.clear();
         if ((type = temp.get()) != '-') { // check if there is any file in dir
@@ -499,7 +515,7 @@ File* Filesystem::read_file(int page)
         temp.get();
         temp.read((char*) &at, sizeof(uint));
         temp.get();
-        RegularFile *f = new RegularFile(page, name, next_block, ct, mt, at);
+        RegularFile *f = new RegularFile(page, name, ct, mt, at);
         std::getline(temp, f->content, '-');
         return (File*)f;
     }

@@ -54,4 +54,5 @@ private:
     void rmdir(Directory *, int n = 0);
     void find(Directory *d, std::string path, std::string search);
     uint dir_size(int page);
+    void rm(RegularFile *);
 };

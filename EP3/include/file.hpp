@@ -7,12 +7,11 @@
 class File {
 public:
     // Creates a File.
-    File(int page, std::string name, int next_block, char type,
+    File(int page, std::string name, char type,
          uint creation_time, uint modification_time, uint access_time);
     virtual ~File() {};
     int page;
     std::string name;
-    int next_block;
     char type;
     uint creation_time, modification_time, access_time;
 };
