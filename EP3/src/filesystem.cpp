@@ -37,7 +37,6 @@ Filesystem::Filesystem(std::string filename)
 
         uint now = (uint)time(NULL);
         root = new Directory(ROOT_PAGE, "/", now, now, now);
-        bitmap_set(ROOT_PAGE, 0);
         write_file(root);
     }
 
@@ -199,8 +198,6 @@ void Filesystem::mkdir(std::string path) {
     parent->files[name] = { d, 'd', p };
     write_file(d);
     write_file(parent);
-    bitmap_set(p, 0);
-    fat_set(p, -1);
 }
 
 void Filesystem::ls(std::string path)
@@ -249,8 +246,6 @@ RegularFile *Filesystem::touch(std::string path)
     parent->files[name] = { f, 'f', p };
     write_file(f);
     write_file(parent);
-    bitmap_set(p, 0);
-    fat_set(p, -1);
     return f;
 }
 
@@ -357,8 +352,8 @@ void Filesystem::find(Directory *d, std::string path, std::string search) {
 
 void Filesystem::write_file(File *f) {
     /* data format:
-     * Separate the following fields with "-" (including one at the
-     * end):
+     * Separate the following fields with "-", except for the first two
+     * Include one "-" at the end of all content
      *
      * * next block
      * * type (d or f)
@@ -381,8 +376,6 @@ void Filesystem::write_file(File *f) {
     char type = f->type;
     std::stringstream temp;
 
-    temp.write((char*) &fat[f->page], sizeof(int));
-    temp.put('-');
     temp.put(type);
     temp.put('-');
     if (type == 'f') {
@@ -420,33 +413,34 @@ void Filesystem::write_file(File *f) {
     }
     temp.put('-');
 
-    int block = f->page, next_block;
-    char buff[PAGE_SIZE];
-    uint remaining = temp.str().length() - (uint) temp.tellg();
+    int block, next_block = f->page;
+    const uint page_space = PAGE_SIZE - sizeof(int);
+    char buff[page_space];
 
-    while (remaining > PAGE_SIZE) {
-        next_block = free_page();
+    while (!temp.eof()) {
         if (next_block == -1) {
-            std::cerr << "Sistema de arquivos cheio. Cancelando..." << std::endl;
-            return;
+            next_block = free_page();
+            if (next_block == -1) {
+                //TODO: fazer o arquivo não existir
+                std::cerr << "Sistema de arquivos cheio. Cancelando..." 
+                          << std::endl;
+                return;
+            }
+            fat_set(block, next_block);
+            fat_set(next_block, -1);
         }
-        fat_set(block, next_block);
-        bitmap_set(next_block, 0);
-
-        fs->seekp(block * PAGE_SIZE);
-        temp.read(buff, PAGE_SIZE);
-        fs->write(buff, PAGE_SIZE);
-
-        fs->seekp(block * PAGE_SIZE);
-        fs->write((char*) &next_block, sizeof(int));
-
         block = next_block;
-        remaining -= PAGE_SIZE;
+
+        fs->seekp(block * PAGE_SIZE);
+        fs->write((char*) &fat[f->page], sizeof(int));
+
+        temp.read(buff, page_space);
+        fs->write(buff, page_space);
+
+        bitmap_set(block, 0);
+        next_block = fat[block];
     }
 
-    fs->seekp(block * PAGE_SIZE);
-    temp.read(buff, remaining);
-    fs->write(buff, remaining);
 }
 
 File* Filesystem::read_file(int page)
@@ -456,24 +450,21 @@ File* Filesystem::read_file(int page)
 
     int block = page;
     std::stringstream temp;
-    char buff[PAGE_SIZE];
+    const uint page_space = PAGE_SIZE - sizeof(int);
+    char buff[page_space];
 
     while (block != -1) {
-        fs->seekg(block * PAGE_SIZE);
-        fs->read(buff, PAGE_SIZE);
-        temp.write(buff, PAGE_SIZE);
+        fs->seekg(block * PAGE_SIZE + sizeof(int));
+        fs->read(buff, page_space);
+        temp.write(buff, page_space);
         block = fat[block];
     }
 
     char c, type;
-    int next_block;
     uint size;
     std::string name;
     uint ct, mt, at;
 
-
-    temp.read((char *) &next_block, sizeof(int));
-    temp.get();
     if ((type = temp.get()) == 'd') {
         temp.get();
         std::getline(temp, name, '-');
@@ -519,6 +510,7 @@ File* Filesystem::read_file(int page)
         std::getline(temp, f->content, '-');
         return (File*)f;
     }
+
     return nullptr;
 }
 
